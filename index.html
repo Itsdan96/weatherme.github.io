@@ -3,2039 +3,296 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
-    <!-- iOS & Android Standalone PWA App Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Atmosphere">
+    <meta name="apple-mobile-web-app-title" content="Atmosphere Pro">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#0f172a">
-
-    <title>Atmosphere Global | Adaptive Weather, Audio & Regional Telemetry</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#090d16">
+    <title>Atmosphere Global Pro | Weather, RiverNet.lk, Seismic & Radar Telemetry</title>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <style>
-        :root {
-            --glass-bg: rgba(15, 23, 42, 0.50);
-            --glass-border: rgba(255, 255, 255, 0.16);
-            --glass-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.35);
-            --text-primary: #ffffff;
-            --text-secondary: rgba(255, 255, 255, 0.72);
-            --accent: #38bdf8;
-            --safe-top: env(safe-area-inset-top, 0px);
-            --safe-bottom: env(safe-area-inset-bottom, 0px);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            min-height: 100vh;
-            color: var(--text-primary);
-            overflow-x: hidden;
-            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0f172a 100%);
-            transition: background 1.5s ease;
-            position: relative;
-            padding-top: var(--safe-top);
-            padding-bottom: calc(80px + var(--safe-bottom));
-        }
-
-        /* Dynamic Weather & Country Themes */
-        body.theme-clear-day { background: linear-gradient(135deg, #0284c7 0%, #1d4ed8 55%, #0f172a 100%); }
-        body.theme-clear-night { background: linear-gradient(135deg, #040711 0%, #0f172a 50%, #1e1b4b 100%); }
-        body.theme-cloudy-day { background: linear-gradient(135deg, #334155 0%, #475569 50%, #1e293b 100%); }
-        body.theme-cloudy-night { background: linear-gradient(135deg, #090d16 0%, #1e293b 100%); }
-        body.theme-rain { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #090d16 100%); }
-        body.theme-thunder { background: linear-gradient(135deg, #090514 0%, #1e1b4b 45%, #0f172a 100%); }
-        body.theme-heatwave { background: linear-gradient(135deg, #7c2d12 0%, #b45309 50%, #1e1b4b 100%); }
-
-        /* Background Canvas & Overlays */
-        #weather-canvas {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        #lightning {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #e0f2fe;
-            opacity: 0;
-            pointer-events: none;
-            z-index: 1;
-            transition: opacity 0.08s ease;
-        }
-
-        #danger-vignette {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 90;
-            opacity: 0;
-            box-shadow: inset 0 0 130px rgba(239, 68, 68, 0.8);
-            transition: opacity 0.5s ease;
-        }
-        body.red-alert-active #danger-vignette {
-            animation: dangerPulse 2s infinite ease-in-out;
-        }
-
-        @keyframes dangerPulse {
-            0%, 100% { opacity: 0.15; }
-            50% { opacity: 0.85; }
-        }
-
-        /* Main Container */
-        .app-container {
-            position: relative;
-            z-index: 2;
-            max-width: 1280px;
-            margin: 0 auto;
-            padding: 18px 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-        }
-
-        .glass {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            box-shadow: var(--glass-shadow);
-        }
-
-        /* Header */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .brand-logo {
-            width: 44px; height: 44px;
-            border-radius: 14px;
-            background: linear-gradient(135deg, #38bdf8, #2563eb);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.5rem;
-            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4);
-        }
-
-        .brand-title {
-            font-size: 1.3rem;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .region-badge {
-            font-size: 0.7rem;
-            background: linear-gradient(90deg, #38bdf8, #818cf8);
-            color: #0f172a;
-            padding: 3px 9px;
-            border-radius: 20px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .brand-sub {
-            font-size: 0.74rem;
-            color: var(--text-secondary);
-        }
-
-        /* Search Bar */
-        .search-wrapper {
-            position: relative;
-            flex: 1;
-            max-width: 390px;
-            min-width: 240px;
-        }
-
-        .search-bar {
-            display: flex;
-            align-items: center;
-            padding: 11px 18px;
-            border-radius: 50px;
-            width: 100%;
-            transition: all 0.3s;
-        }
-
-        .search-bar:focus-within {
-            border-color: #38bdf8;
-            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
-        }
-
-        .search-bar input {
-            background: transparent;
-            border: none;
-            color: white;
-            font-size: 0.95rem;
-            width: 100%;
-            outline: none;
-            margin-left: 10px;
-        }
-        .search-bar input::placeholder { color: var(--text-secondary); }
-
-        .search-results {
-            position: absolute;
-            top: calc(100% + 8px);
-            left: 0; width: 100%;
-            background: rgba(15, 23, 42, 0.96);
-            backdrop-filter: blur(24px);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            max-height: 280px;
-            overflow-y: auto;
-            z-index: 150;
-            display: none;
-        }
-        .search-results.active { display: block; }
-        .search-item {
-            padding: 12px 18px;
-            cursor: pointer;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .search-item:hover { background: rgba(255,255,255,0.12); }
-
-        /* Controls & Audio Button */
-        .controls {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 10px 14px;
-            border-radius: 50px;
-            border: 1px solid var(--glass-border);
-            background: var(--glass-bg);
-            color: white;
-            cursor: pointer;
-            display: flex; align-items: center; gap: 7px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            transition: all 0.2s;
-            backdrop-filter: blur(12px);
-        }
-        .btn:hover { background: rgba(255,255,255,0.2); transform: translateY(-1px); }
-
-        .btn.audio-active {
-            background: rgba(16, 185, 129, 0.25);
-            border-color: #10b981;
-            color: #6ee7b7;
-            box-shadow: 0 0 18px rgba(16, 185, 129, 0.3);
-        }
-
-        /* Animated Sound Equalizer Bars */
-        .eq-bars {
-            display: inline-flex;
-            align-items: flex-end;
-            gap: 2px;
-            height: 14px;
-        }
-        .eq-bar {
-            width: 3px;
-            background: currentColor;
-            border-radius: 2px;
-            height: 4px;
-            transition: height 0.2s;
-        }
-        .audio-active .eq-bar:nth-child(1) { animation: eqAnim 0.6s infinite ease-in-out alternate; }
-        .audio-active .eq-bar:nth-child(2) { animation: eqAnim 0.45s infinite ease-in-out alternate 0.15s; }
-        .audio-active .eq-bar:nth-child(3) { animation: eqAnim 0.7s infinite ease-in-out alternate 0.3s; }
-
-        @keyframes eqAnim {
-            0% { height: 3px; }
-            100% { height: 14px; }
-        }
-
-        .sim-select {
-            appearance: none;
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(250, 204, 21, 0.45);
-            color: #fde047;
-            padding: 10px 14px;
-            border-radius: 50px;
-            font-size: 0.82rem;
-            font-weight: 600;
-            cursor: pointer;
-            outline: none;
-        }
-
-        /* Country & State Selector Bar */
-        .region-nav-container {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .country-tabs, .state-pills {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            overflow-x: auto;
-            padding-bottom: 4px;
-            scrollbar-width: none;
-        }
-        .country-tabs::-webkit-scrollbar, .state-pills::-webkit-scrollbar { display: none; }
-
-        .country-tab {
-            padding: 8px 16px;
-            border-radius: 50px;
-            background: rgba(255, 255, 255, 0.07);
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            color: var(--text-primary);
-            font-size: 0.85rem;
-            font-weight: 700;
-            cursor: pointer;
-            white-space: nowrap;
-            display: flex; align-items: center; gap: 6px;
-            transition: all 0.2s;
-        }
-        .country-tab.active {
-            background: linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(37, 99, 235, 0.35));
-            border-color: #38bdf8;
-            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.25);
-        }
-
-        .state-pill {
-            padding: 6px 13px;
-            border-radius: 50px;
-            background: rgba(15, 23, 42, 0.55);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.2s;
-        }
-        .state-pill:hover, .state-pill.active {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border-color: rgba(255, 255, 255, 0.5);
-        }
-
-        /* ==========================================================================
-           EARLY WARNING ALERT BANNER
-           ========================================================================== */
-        .alert-banner {
-            padding: 16px 22px;
-            border-radius: 22px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            flex-wrap: wrap;
-            transition: all 0.4s ease;
-        }
-
-        .alert-banner.level-green {
-            background: linear-gradient(90deg, rgba(16, 185, 129, 0.22), rgba(15, 23, 42, 0.6));
-            border: 1px solid rgba(16, 185, 129, 0.45);
-        }
-        .alert-banner.level-yellow {
-            background: linear-gradient(90deg, rgba(250, 204, 21, 0.28), rgba(15, 23, 42, 0.7));
-            border: 1px solid rgba(250, 204, 21, 0.65);
-        }
-        .alert-banner.level-orange {
-            background: linear-gradient(90deg, rgba(249, 115, 22, 0.35), rgba(15, 23, 42, 0.75));
-            border: 1px solid rgba(249, 115, 22, 0.75);
-        }
-        .alert-banner.level-red {
-            background: linear-gradient(90deg, rgba(239, 68, 68, 0.48), rgba(127, 29, 29, 0.8));
-            border: 1px solid #ef4444;
-            box-shadow: 0 0 40px rgba(239, 68, 68, 0.45);
-        }
-
-        .alert-left {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            flex: 1;
-            min-width: 250px;
-        }
-
-        .alert-beacon {
-            width: 48px; height: 48px;
-            border-radius: 14px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.7rem;
-            flex-shrink: 0;
-        }
-        .level-green .alert-beacon { background: rgba(16, 185, 129, 0.25); color: #34d399; }
-        .level-yellow .alert-beacon { background: rgba(250, 204, 21, 0.25); color: #fde047; }
-        .level-orange .alert-beacon { background: rgba(249, 115, 22, 0.3); color: #fb923c; }
-        .level-red .alert-beacon { background: rgba(239, 68, 68, 0.35); color: #fca5a5; }
-
-        .alert-badge-pill {
-            display: inline-flex;
-            font-size: 0.7rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            padding: 3px 9px;
-            border-radius: 50px;
-            margin-bottom: 4px;
-        }
-        .level-green .alert-badge-pill { background: #10b981; color: #022c22; }
-        .level-yellow .alert-badge-pill { background: #facc15; color: #422006; }
-        .level-orange .alert-badge-pill { background: #f97316; color: #431407; }
-        .level-red .alert-badge-pill { background: #ef4444; color: #ffffff; }
-
-        .alert-headline { font-size: 1.05rem; font-weight: 700; margin-bottom: 2px; }
-        .alert-desc { font-size: 0.84rem; color: var(--text-secondary); }
-
-        .emergency-hotlines {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .hotline-chip {
-            background: rgba(0, 0, 0, 0.35);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            padding: 7px 12px;
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-decoration: none;
-            color: white;
-        }
-        .hotline-num { font-size: 0.98rem; font-weight: 800; color: #38bdf8; }
-        .hotline-lbl { font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; }
-
-        /* ==========================================================================
-           DASHBOARD GRID
-           ========================================================================== */
-        .dashboard {
-            display: grid;
-            grid-template-columns: 1fr 1.85fr;
-            gap: 18px;
-        }
-
-        .current-weather {
-            padding: 26px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .location-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 1.25rem;
-            font-weight: 700;
-        }
-
-        .climate-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 8px;
-            padding: 4px 12px;
-            border-radius: 50px;
-            background: rgba(56, 189, 248, 0.16);
-            border: 1px solid rgba(56, 189, 248, 0.35);
-            font-size: 0.76rem;
-            font-weight: 600;
-            color: #7dd3fc;
-            width: fit-content;
-        }
-
-        .hero-temp-container {
-            margin: 24px 0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .temp-huge {
-            font-size: 5rem;
-            font-weight: 800;
-            letter-spacing: -3px;
-            line-height: 1;
-        }
-
-        .hero-icon {
-            font-size: 5.2rem;
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.35));
-            animation: float 4s ease-in-out infinite;
-        }
-
-        .weather-desc { font-size: 1.3rem; font-weight: 600; margin-bottom: 6px; }
-        .high-low { display: flex; gap: 14px; color: var(--text-secondary); font-size: 0.92rem; font-weight: 500; }
-
-        .live-status {
-            margin-top: 22px;
-            padding-top: 14px;
-            border-top: 1px solid var(--glass-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.78rem;
-            color: var(--text-secondary);
-        }
-
-        .pulse-dot {
-            width: 8px; height: 8px;
-            background: #10b981;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 6px;
-            box-shadow: 0 0 10px #10b981;
-        }
-
-        .details-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-            overflow: hidden;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 14px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .section-title {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 700;
-        }
-
-        /* Hourly Scroll */
-        .hourly-card { padding: 20px; }
-        .hourly-scroll {
-            display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            padding-bottom: 6px;
-            scrollbar-width: thin;
-        }
-        .hour-item {
-            min-width: 72px;
-            padding: 12px 10px;
-            border-radius: 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-        }
-        .hour-item.now { background: rgba(56, 189, 248, 0.22); border-color: #38bdf8; }
-        .hour-time { font-size: 0.78rem; color: var(--text-secondary); font-weight: 600; }
-        .hour-icon { font-size: 1.6rem; }
-        .hour-temp { font-size: 0.96rem; font-weight: 700; }
-        .hour-pop { font-size: 0.7rem; color: #38bdf8; font-weight: 700; height: 14px; }
-
-        /* Metrics Grid */
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-        }
-        .metric-card {
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            gap: 6px;
-        }
-        .metric-header {
-            display: flex; align-items: center; gap: 6px;
-            color: var(--text-secondary);
-            font-size: 0.8rem; font-weight: 600;
-        }
-        .metric-value { font-size: 1.45rem; font-weight: 800; }
-        .metric-sub { font-size: 0.75rem; color: var(--text-secondary); }
-
-        /* ==========================================================================
-           COUNTRY & STATE ADAPTIVE COMMAND CENTER (SL / AUS / USA / GLOBAL)
-           ========================================================================== */
-        .regional-section { padding: 24px; }
-
-        .hydro-top-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 20px;
-        }
-
-        .risk-box {
-            padding: 18px;
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            gap: 12px;
-        }
-
-        .risk-meter-bar {
-            height: 10px;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.12);
-            border-radius: 20px;
-            overflow: hidden;
-        }
-        .risk-meter-fill {
-            height: 100%;
-            border-radius: 20px;
-            transition: width 1s cubic-bezier(0.22, 1, 0.36, 1), background 0.5s;
-        }
-
-        /* Australian Bushfire Danger Semicircle Gauge */
-        .fire-gauge-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-        }
-        .fire-dial {
-            width: 110px; height: 60px;
-            position: relative;
-            overflow: hidden;
-            flex-shrink: 0;
-        }
-        .fire-dial-arc {
-            width: 110px; height: 110px;
-            border-radius: 50%;
-            background: conic-gradient(
-                from 270deg,
-                #22c55e 0deg 45deg,
-                #facc15 45deg 90deg,
-                #f97316 90deg 135deg,
-                #ef4444 135deg 180deg,
-                transparent 180deg 360deg
-            );
-            mask: radial-gradient(transparent 55%, black 56%);
-            -webkit-mask: radial-gradient(transparent 55%, black 56%);
-        }
-        .fire-needle {
-            position: absolute;
-            bottom: 0; left: 50%;
-            width: 3px; height: 48px;
-            background: #ffffff;
-            transform-origin: bottom center;
-            transform: rotate(-70deg);
-            transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1);
-            border-radius: 4px;
-            box-shadow: 0 0 6px rgba(0,0,0,0.8);
-        }
-
-        /* River Cards */
-        .rivers-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 14px;
-        }
-
-        .river-card {
-            position: relative;
-            height: 200px;
-            border-radius: 20px;
-            background: rgba(15, 23, 42, 0.65);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            overflow: hidden;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .river-card.status-normal { border-color: rgba(16, 185, 129, 0.4); }
-        .river-card.status-yellow { border-color: rgba(250, 204, 21, 0.65); }
-        .river-card.status-orange { border-color: rgba(249, 115, 22, 0.75); }
-        .river-card.status-red { border-color: #ef4444; box-shadow: 0 0 25px rgba(239, 68, 68, 0.35); }
-
-        .water-tank {
-            position: absolute;
-            bottom: 0; left: 0;
-            width: 100%; height: 35%;
-            z-index: 0;
-            transition: height 1.2s ease;
-        }
-        .water-wave-svg {
-            position: absolute;
-            top: -20px; left: 0;
-            width: 200%; height: 22px;
-            animation: waveSlide 4s linear infinite;
-        }
-        @keyframes waveSlide {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-        }
-        .water-body { width: 100%; height: 100%; }
-
-        .river-content-top, .river-content-bottom { position: relative; z-index: 2; }
-        .river-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
-        .river-name { font-size: 1rem; font-weight: 700; }
-        .river-station { font-size: 0.73rem; color: var(--text-secondary); }
-
-        .river-badge {
-            font-size: 0.66rem;
-            font-weight: 800;
-            padding: 3px 8px;
-            border-radius: 50px;
-            text-transform: uppercase;
-            white-space: nowrap;
-        }
-        .badge-normal { background: rgba(16, 185, 129, 0.25); color: #6ee7b7; border: 1px solid #10b981; }
-        .badge-yellow { background: rgba(250, 204, 21, 0.25); color: #fef08a; border: 1px solid #facc15; }
-        .badge-orange { background: rgba(249, 115, 22, 0.3); color: #fed7aa; border: 1px solid #f97316; }
-        .badge-red { background: #ef4444; color: #ffffff; }
-
-        .river-readings { display: flex; justify-content: space-between; align-items: flex-end; }
-        .water-level-val { font-size: 1.75rem; font-weight: 800; line-height: 1; }
-        .water-level-unit { font-size: 0.8rem; color: var(--text-secondary); }
-        .discharge-info { text-align: right; font-size: 0.72rem; color: rgba(255,255,255,0.85); }
-
-        /* 7-Day Forecast */
-        .weekly-card { padding: 22px; }
-        .daily-list { display: flex; flex-direction: column; gap: 8px; }
-        .day-row {
-            display: grid;
-            grid-template-columns: 1.2fr 1fr 2fr;
-            align-items: center;
-            padding: 11px 14px;
-            border-radius: 14px;
-            background: rgba(255, 255, 255, 0.04);
-        }
-        .day-name { font-weight: 600; font-size: 0.92rem; }
-        .day-condition { display: flex; align-items: center; gap: 8px; font-size: 1.3rem; }
-        .day-pop { font-size: 0.75rem; color: #38bdf8; font-weight: 700; }
-        .day-temps { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
-        .temp-bar-wrapper {
-            flex: 1; max-width: 130px; height: 6px;
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 10px; position: relative; overflow: hidden;
-        }
-        .temp-bar-fill {
-            position: absolute; height: 100%; border-radius: 10px;
-            background: linear-gradient(90deg, #38bdf8, #facc15, #f97316);
-        }
-        .t-min { color: var(--text-secondary); width: 34px; text-align: right; font-size: 0.88rem; }
-        .t-max { font-weight: 700; width: 34px; font-size: 0.88rem; }
-
-        /* ==========================================================================
-           MOBILE BOTTOM NAVIGATION BAR (iPhone & Android Native App Feel)
-           ========================================================================== */
-        .mobile-bottom-nav {
-            position: fixed;
-            bottom: 0; left: 0; width: 100%;
-            background: rgba(9, 13, 22, 0.88);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border-top: 1px solid rgba(255, 255, 255, 0.14);
-            padding: 8px 16px calc(8px + var(--safe-bottom));
-            display: none;
-            justify-content: space-around;
-            align-items: center;
-            z-index: 120;
-        }
-
-        .mob-nav-item {
-            background: none; border: none;
-            color: var(--text-secondary);
-            display: flex; flex-direction: column;
-            align-items: center; gap: 4px;
-            font-size: 0.68rem; font-weight: 600;
-            cursor: pointer;
-        }
-        .mob-nav-item i { font-size: 1.35rem; }
-        .mob-nav-item.active { color: #38bdf8; }
-
-        /* Install App Modal */
-        .modal-overlay {
-            position: fixed; inset: 0;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(10px);
-            z-index: 250;
-            display: none;
-            align-items: center; justify-content: center;
-            padding: 20px;
-        }
-        .modal-overlay.active { display: flex; }
-        .modal-box {
-            max-width: 440px; width: 100%;
-            padding: 26px;
-            background: #0f172a;
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-7px); }
-        }
-
-        /* Loader */
-        #loader {
-            position: fixed; inset: 0;
-            background: rgba(9, 13, 22, 0.9);
-            backdrop-filter: blur(16px);
-            z-index: 300;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center; gap: 14px;
-            transition: opacity 0.35s ease;
-        }
-        .spinner {
-            width: 44px; height: 44px;
-            border: 4px solid rgba(255,255,255,0.15);
-            border-top-color: #38bdf8;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Responsive */
-        @media (max-width: 1024px) {
-            .dashboard { grid-template-columns: 1fr; }
-            .hydro-top-grid { grid-template-columns: 1fr; }
-            .rivers-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-        @media (max-width: 680px) {
-            .app-container { padding: 12px 14px; }
-            .rivers-grid { grid-template-columns: 1fr; }
-            .metrics-grid { grid-template-columns: 1fr 1fr; }
-            .temp-huge { font-size: 4.1rem; }
-            .mobile-bottom-nav { display: flex; }
-        }
-    </style>
+    
+    <!-- Leaflet Interactive GIS Map CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body class="theme-clear-day">
-
-    <!-- Weather Particle Canvas & Visual FX -->
     <canvas id="weather-canvas"></canvas>
     <div id="lightning"></div>
     <div id="danger-vignette"></div>
 
-    <!-- Loading Screen -->
-    <div id="loader">
+    <div id="loader" aria-live="polite">
         <div class="spinner"></div>
-        <p id="loader-text" style="font-weight: 500; font-size: 0.92rem;">Syncing Satellite Weather, Air Quality & Regional Telemetry...</p>
+        <p id="loader-text">Syncing Satellite Weather, RiverNet.lk, Marine & USGS Seismic Telemetry...</p>
     </div>
 
-    <!-- Mobile App Install Guide Modal -->
-    <div class="modal-overlay" id="install-modal">
-        <div class="modal-box">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                <h3 style="font-size:1.15rem;">📱 Install on iPhone & Android</h3>
-                <button id="close-modal" style="background:none; border:none; color:white; font-size:1.3rem; cursor:pointer;">✕</button>
-            </div>
-            <p style="font-size:0.86rem; color:var(--text-secondary); margin-bottom:16px;">
-                This app is built with standalone Web-App standards so it runs full-screen on both iOS and Android without an App Store download:
-            </p>
-            <div style="background:rgba(255,255,255,0.06); padding:14px; border-radius:14px; margin-bottom:12px; font-size:0.84rem;">
-                <strong style="color:#38bdf8;">🍏 iPhone / iPad (Safari):</strong>
-                <ol style="margin-left:18px; margin-top:6px; line-height:1.6;">
-                    <li>Open this file or link in <strong>Safari</strong>.</li>
-                    <li>Tap the <strong>Share</strong> icon <i class="ph-bold ph-export"></i> at the bottom.</li>
-                    <li>Select <strong>"Add to Home Screen"</strong>.</li>
-                </ol>
-            </div>
-            <div style="background:rgba(255,255,255,0.06); padding:14px; border-radius:14px; font-size:0.84rem;">
-                <strong style="color:#34d399;">🤖 Android (Chrome):</strong>
-                <ol style="margin-left:18px; margin-top:6px; line-height:1.6;">
-                    <li>Open in <strong>Chrome</strong>.</li>
-                    <li>Tap the <strong>3-dot menu (⋮)</strong> in the top right.</li>
-                    <li>Tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong>.</li>
-                </ol>
-            </div>
-        </div>
-    </div>
-
-    <div class="app-container" id="top-sec">
-        <!-- Header -->
+    <div class="app-container">
         <header>
             <div class="brand">
                 <div class="brand-logo"><i class="ph-fill ph-planet"></i></div>
-                <div>
-                    <div class="brand-title">
-                        Atmosphere <span class="region-badge" id="active-country-badge">🇱🇰 Sri Lanka</span>
-                    </div>
-                    <div class="brand-sub">Country & State Adaptive Weather + Procedural Soundscape</div>
+                <div class="brand-title">
+                    Atmosphere 
+                    <span class="region-badge" id="active-country-badge">🇱🇰 Sri Lanka</span>
+                    <span class="status-pill live" id="data-status-badge" title="Real-time API connection status">● LIVE TELEMETRY</span>
                 </div>
             </div>
-
+            
             <div class="search-wrapper">
                 <div class="search-bar glass">
                     <i class="ph ph-magnifying-glass"></i>
-                    <input type="text" id="city-input" placeholder="Search any city, state, or postcode..." autocomplete="off">
+                    <input type="text" id="city-input" placeholder="Search ANY city or town worldwide..." autocomplete="off" aria-label="Search city worldwide">
                 </div>
                 <div class="search-results" id="search-results"></div>
             </div>
 
             <div class="controls">
-                <!-- Procedural Weather Sound FX Button -->
-                <button class="btn" id="audio-btn" title="Toggle Live Weather Sound Effects">
+                <button class="btn" id="audio-btn" aria-label="Toggle Ambient Weather Audio">
                     <i class="ph-fill ph-speaker-slash" id="audio-icon"></i>
-                    <span id="audio-label">Sound FX: Off</span>
-                    <div class="eq-bars">
-                        <span class="eq-bar"></span>
-                        <span class="eq-bar"></span>
-                        <span class="eq-bar"></span>
-                    </div>
+                    <span id="audio-label">Audio: Off</span>
                 </button>
-
-                <!-- Alert & Hazard Simulator -->
-                <select id="sim-mode" class="sim-select" title="Simulate Weather & Regional Disasters">
+                <select id="sim-mode" class="sim-select" aria-label="Simulation Mode">
                     <option value="live">📡 Live Satellite</option>
                     <option value="yellow">🟡 Yellow Watch</option>
                     <option value="orange">🟠 Orange Warning</option>
                     <option value="red">🔴 Red Emergency</option>
                 </select>
-
-                <button class="btn" id="loc-btn" title="GPS Location"><i class="ph-fill ph-navigation-arrow"></i></button>
-                <button class="btn" id="unit-btn"><span id="unit-label">°C</span></button>
-                <button class="btn" id="install-btn" title="Mobile App Guide"><i class="ph-bold ph-device-mobile"></i></button>
+                <button class="btn" id="refresh-btn" title="Force Sync Data" aria-label="Refresh Telemetry Data">
+                    <i class="ph-bold ph-arrows-clockwise"></i>
+                </button>
+                <button class="btn" id="loc-btn" title="Use GPS Location" aria-label="Use GPS Location">
+                    <i class="ph-fill ph-navigation-arrow"></i>
+                </button>
+                <button class="btn" id="unit-btn" aria-label="Toggle Celsius or Fahrenheit">
+                    <span id="unit-label">°C</span>
+                </button>
             </div>
         </header>
 
-        <!-- Country & State-by-State Selector -->
-        <div class="region-nav-container">
-            <div class="country-tabs" id="country-tabs">
-                <button class="country-tab active" data-country="LK">🇱🇰 Sri Lanka (Provinces)</button>
-                <button class="country-tab" data-country="AU">🇦🇺 Australia (States)</button>
-                <button class="country-tab" data-country="US">🇺🇸 USA (States)</button>
-                <button class="country-tab" data-country="GB">🇬🇧 UK (Regions)</button>
-                <button class="country-tab" data-country="JP">🇯🇵 Japan (Prefectures)</button>
+        <div class="top-nav-row">
+            <div class="view-tabs" role="tablist">
+                <button class="view-tab-btn active" data-tab="overview" role="tab"><i class="ph-fill ph-sun-horizon"></i> Weather & Outlook</button>
+                <button class="view-tab-btn" data-tab="rivers" role="tab"><i class="ph-fill ph-waves"></i> RiverNet & Gauges <span class="tab-badge" id="river-count-badge">12</span></button>
+                <button class="view-tab-btn" data-tab="hazards" role="tab"><i class="ph-fill ph-shield-warning"></i> 8-Hazard Matrix</button>
+                <button class="view-tab-btn" data-tab="radar" role="tab"><i class="ph-fill ph-globe-hemisphere-east"></i> Radar, Marine & Quakes</button>
             </div>
-            <div class="state-pills" id="state-pills">
-                <!-- Populated dynamically per Country -->
+            <div class="country-bar" id="country-tabs">
+                <button class="country-chip active" data-country="LK">🇱🇰 Sri Lanka</button>
+                <button class="country-chip" data-country="AU">🇦🇺 Australia</button>
+                <button class="country-chip" data-country="US">🇺🇸 USA</button>
+                <button class="country-chip" data-country="GB">🇬🇧 UK</button>
+                <button class="country-chip" data-country="JP">🇯🇵 Japan</button>
+                <button class="country-chip" data-country="GLOBAL">🌍 Worldwide</button>
             </div>
         </div>
 
-        <!-- REGIONAL EARLY WARNING ALERT BANNER -->
-        <section class="alert-banner level-green glass" id="alert-banner">
+        <div class="state-pills" id="state-pills"></div>
+
+        <!-- Master Emergency Alert Banner -->
+        <section class="alert-banner level-green glass" id="alert-banner" role="alert" aria-live="assertive">
             <div class="alert-left">
-                <div class="alert-beacon" id="alert-icon">
-                    <i class="ph-fill ph-shield-check"></i>
-                </div>
+                <div class="alert-beacon" id="alert-icon"><i class="ph-fill ph-shield-check"></i></div>
                 <div>
                     <div class="alert-badge-pill" id="alert-pill">GREEN • NORMAL</div>
-                    <div class="alert-headline" id="alert-title">No Active Severe Weather Warnings</div>
-                    <div class="alert-desc" id="alert-desc">Regional telemetry and hydrological basins are operating within normal safety thresholds.</div>
+                    <div class="alert-headline" id="alert-title">Conditions Normal Across Monitored Basins</div>
+                    <div class="alert-desc" id="alert-desc">Real-time weather, marine, and river telemetry are within safe operating thresholds.</div>
                 </div>
             </div>
-            <div class="emergency-hotlines" id="hotlines-container">
-                <!-- Populated dynamically per Country -->
-            </div>
+            <div class="emergency-hotlines" id="hotlines-container"></div>
         </section>
 
-        <!-- MAIN WEATHER DASHBOARD -->
-        <main class="dashboard">
-            <section class="current-weather glass">
-                <div>
-                    <div class="location-badge">
-                        <i class="ph-fill ph-map-pin" style="color: #38bdf8;"></i>
-                        <span id="loc-name">Colombo, Western</span>
-                    </div>
-                    <div id="current-date" style="color: var(--text-secondary); font-size: 0.88rem; margin-top: 4px;">--</div>
-                    <div class="climate-tag" id="climate-tag">
-                        <i class="ph-fill ph-compass"></i>
-                        <span>Tropical Monsoon Zone</span>
-                    </div>
-                </div>
-
-                <div class="hero-temp-container">
-                    <div class="temp-huge" id="current-temp">--°</div>
-                    <div class="hero-icon" id="current-icon">⛅</div>
-                </div>
-
-                <div>
-                    <div class="weather-desc" id="current-desc">--</div>
-                    <div class="high-low">
-                        <span><i class="ph-bold ph-arrow-up"></i> <span id="temp-max">--°</span></span>
-                        <span><i class="ph-bold ph-arrow-down"></i> <span id="temp-min">--°</span></span>
-                        <span>Feels <span id="feels-like">--°</span></span>
-                    </div>
-                </div>
-
-                <div class="live-status">
+        <!-- TAB 1: WEATHER OVERVIEW -->
+        <div class="tab-view active" id="tab-overview">
+            <div class="landing-grid">
+                <section class="hero-card glass">
                     <div>
-                        <span class="pulse-dot"></span>
-                        <span id="last-updated">Live Stream Active</span>
+                        <div class="location-badge">
+                            <i class="ph-fill ph-map-pin" style="color: #38bdf8;"></i>
+                            <span id="loc-name">Ratnapura, Sabaragamuwa</span>
+                        </div>
+                        <div id="current-date" class="sub-date">--</div>
                     </div>
-                    <button id="refresh-btn" style="background:none; border:none; color:white; cursor:pointer; display:flex; align-items:center; gap:5px; font-weight:600;">
-                        <i class="ph-bold ph-arrows-clockwise"></i> Sync
-                    </button>
+                    <div class="hero-temp-row">
+                        <div class="temp-huge" id="current-temp">--°</div>
+                        <div class="hero-icon" id="current-icon">⛅</div>
+                    </div>
+                    <div>
+                        <div class="weather-desc" id="current-desc">--</div>
+                        <div class="high-low">
+                            <span><i class="ph-bold ph-arrow-up"></i> <span id="temp-max">--°</span></span>
+                            <span><i class="ph-bold ph-arrow-down"></i> <span id="temp-min">--°</span></span>
+                            <span>Feels Like <span id="feels-like">--°</span></span>
+                            <span><i class="ph-fill ph-gauge"></i> <span id="surface-pressure">---- hPa</span></span>
+                        </div>
+                    </div>
+                    <div class="smart-context-slot" id="smart-context-slot"></div>
+                </section>
+
+                <div class="overview-right-col">
+                    <div class="quick-metrics-grid">
+                        <div class="qm-card glass">
+                            <span class="qm-lbl"><i class="ph-fill ph-cloud-rain" style="color:#38bdf8;"></i> 24h Rain</span>
+                            <span class="qm-val mono" id="qm-rain">-- mm</span>
+                            <span class="qm-sub" id="qm-rain-sub">Safe range</span>
+                        </div>
+                        <div class="qm-card glass">
+                            <span class="qm-lbl"><i class="ph-fill ph-wind" style="color:#a7f3d0;"></i> Peak Gusts</span>
+                            <span class="qm-val mono" id="qm-wind">-- km/h</span>
+                            <span class="qm-sub" id="qm-wind-sub">Calm breeze</span>
+                        </div>
+                        <div class="qm-card glass">
+                            <span class="qm-lbl"><i class="ph-fill ph-sun" style="color:#fde047;"></i> UV Index</span>
+                            <span class="qm-val mono" id="qm-uv">--</span>
+                            <span class="qm-sub" id="qm-uv-sub">Low risk</span>
+                        </div>
+                        <div class="qm-card glass">
+                            <span class="qm-lbl"><i class="ph-fill ph-leaf" style="color:#34d399;"></i> Air Quality</span>
+                            <span class="qm-val mono" id="qm-aqi">--</span>
+                            <span class="qm-sub" id="qm-aqi-sub">Clean air</span>
+                        </div>
+                    </div>
+
+                    <section class="hourly-card glass">
+                        <div class="section-header">
+                            <div class="section-title"><i class="ph-bold ph-clock"></i> 24-Hour Forecast</div>
+                            <span class="region-focus-lbl" id="smart-region-tag">Smart Regional Telemetry Active</span>
+                        </div>
+                        <div class="hourly-scroll" id="hourly-container"></div>
+                    </section>
                 </div>
+            </div>
+
+            <section class="weekly-card glass">
+                <div class="section-header">
+                    <div class="section-title"><i class="ph-bold ph-calendar-blank"></i> 7-Day Forecast & Solar Cycle</div>
+                    <div class="solar-pills" id="solar-pills">
+                        <span><i class="ph-fill ph-sun-horizon" style="color:#fde047;"></i> Sunrise: <strong id="sunrise-time">--:--</strong></span>
+                        <span><i class="ph-fill ph-moon-stars" style="color:#818cf8;"></i> Sunset: <strong id="sunset-time">--:--</strong></span>
+                    </div>
+                </div>
+                <div class="daily-list" id="daily-container"></div>
             </section>
+        </div>
 
-            <div class="details-panel">
-                <section class="hourly-card glass">
-                    <div class="section-header">
-                        <div class="section-title"><i class="ph-bold ph-clock"></i> 24-Hour Forecast</div>
-                        <span id="rain-24h-badge" style="font-size: 0.8rem; color: #38bdf8; font-weight: 700;">24h Precip: -- mm</span>
+        <!-- TAB 2: RIVERNET.LK & SATELLITE WATER LEVEL GAUGES -->
+        <div class="tab-view" id="tab-rivers">
+            <div class="rivernet-header-bar glass">
+                <div>
+                    <div class="hub-title">
+                        <i class="ph-fill ph-broadcast" style="color: #38bdf8;"></i>
+                        <span id="river-hub-title">RiverNet.lk & GloFAS Satellite Hydrological Telemetry</span>
                     </div>
-                    <div class="hourly-scroll" id="hourly-container"></div>
-                </section>
-
-                <section class="metrics-grid">
-                    <div class="metric-card glass">
-                        <div class="metric-header"><i class="ph-fill ph-sun"></i> UV & Burn Time</div>
-                        <div class="metric-value" id="uv-val">--</div>
-                        <div class="metric-sub" id="uv-desc">--</div>
+                    <div class="hub-sub" id="river-hub-sub">
+                        Live sync with Irrigation Dept / RiverNet.lk thresholds for Ratnapura, We Ganga, Kukule Ganga, Kelani, Nilwala & more.
                     </div>
-                    <div class="metric-card glass">
-                        <div class="metric-header"><i class="ph-fill ph-wind"></i> Wind & Gusts</div>
-                        <div class="metric-value" id="wind-val">-- km/h</div>
-                        <div class="metric-sub" id="wind-dir">Gusts: -- km/h</div>
-                    </div>
-                    <div class="metric-card glass">
-                        <div class="metric-header"><i class="ph-fill ph-leaf"></i> Air Quality (AQI)</div>
-                        <div class="metric-value" id="aqi-val">--</div>
-                        <div class="metric-sub" id="aqi-desc">PM2.5: -- µg/m³</div>
-                    </div>
-                    <div class="metric-card glass">
-                        <div class="metric-header"><i class="ph-fill ph-drop"></i> Humidity</div>
-                        <div class="metric-value" id="hum-val">--%</div>
-                        <div class="metric-sub" id="hum-desc">Dew point normal</div>
-                    </div>
-                    <div class="metric-card glass">
-                        <div class="metric-header"><i class="ph-fill ph-cloud-rain"></i> 24h Rainfall</div>
-                        <div class="metric-value" id="rain-val">-- mm</div>
-                        <div class="metric-sub" id="rain-desc">Accumulated</div>
-                    </div>
-                    <div class="metric-card glass">
-                        <div class="metric-header"><i class="ph-fill ph-gauge"></i> Pressure</div>
-                        <div class="metric-value" id="press-val">-- hPa</div>
-                        <div class="metric-sub">Barometric</div>
-                    </div>
-                </section>
-            </div>
-        </main>
-
-        <!-- ==========================================================================
-             REGIONAL COMMAND CENTER (Adapts to Sri Lanka, Australia, USA, UK, etc.)
-             ========================================================================== -->
-        <section class="regional-section glass" id="regional-sec">
-            <div class="section-header">
-                <div class="section-title" id="regional-section-title">
-                    <i class="ph-fill ph-waves" style="color: #38bdf8; font-size: 1.2rem;"></i>
-                    <span>Regional Hazard, Bushfire & River Basin Telemetry</span>
                 </div>
-                <span style="font-size:0.75rem; color:var(--text-secondary);" id="agency-label">Agency: DMC / Irrigation Dept</span>
+                <a href="https://rivernet.lk/ratnapura" target="_blank" rel="noopener" class="rivernet-link-btn" id="rivernet-direct-btn">
+                    <i class="ph-bold ph-arrow-square-out"></i> Open RiverNet.lk Live
+                </a>
             </div>
 
-            <!-- Adaptive Top Risk Widgets (Flood + Landslide OR Bushfire Danger + UV/Heat) -->
-            <div class="hydro-top-grid" id="regional-risk-widgets">
-                <!-- Populated dynamically via JS based on Country -->
-            </div>
+            <section class="glass section-pad">
+                <div class="section-header">
+                    <div class="section-title">
+                        <i class="ph-fill ph-waves" style="color: #38bdf8;"></i>
+                        <span id="river-sec-title">Active River & Tributary Gauges</span>
+                    </div>
+                    <div class="filter-pills" id="basin-filters">
+                        <button class="filter-btn active" data-filter="all">All Stations (12)</button>
+                        <button class="filter-btn" data-filter="kalu">Kalu Basin (Ratnapura / We / Kukule)</button>
+                        <button class="filter-btn" data-filter="kelani">Kelani Basin</button>
+                        <button class="filter-btn" data-filter="south">Southern (Nilwala / Gin)</button>
+                        <button class="filter-btn" data-filter="dry">Mahaweli / Central</button>
+                    </div>
+                </div>
+                <div class="rivers-grid" id="rivers-container"></div>
+            </section>
+        </div>
 
-            <!-- Regional River Gauges -->
-            <div class="rivers-grid" id="rivers-container">
-                <!-- Populated dynamically via JS -->
-            </div>
-        </section>
+        <!-- TAB 3: 8-VECTOR HAZARD TELEMETRY MATRIX -->
+        <div class="tab-view" id="tab-hazards">
+            <section class="glass section-pad">
+                <div class="section-header">
+                    <div class="section-title">
+                        <i class="ph-fill ph-shield-warning" style="color: #facc15;"></i>
+                        <span>All 8 Real-Time Hazard & Photobiology Vectors</span>
+                    </div>
+                    <span class="region-focus-lbl">UV • Burn Time • Heat • Rain • Wind • AQI • Visibility • CAPE • Soil Saturation</span>
+                </div>
+                <div class="hazard-grid" id="hazard-grid"></div>
+            </section>
+        </div>
 
-        <!-- 7-Day Forecast -->
-        <section class="weekly-card glass" id="weekly-sec">
-            <div class="section-header">
-                <div class="section-title"><i class="ph-bold ph-calendar-blank"></i> 7-Day Regional Outlook</div>
+        <!-- TAB 4: LIVE INTERACTIVE RADAR, MARINE & USGS SEISMIC FEED -->
+        <div class="tab-view" id="tab-radar">
+            <div class="radar-seismic-grid">
+                <section class="glass section-pad map-panel">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <i class="ph-fill ph-radar" style="color: #38bdf8;"></i>
+                            <span>Live RainViewer Doppler Radar, River Gauges & Seismic Epicenters</span>
+                        </div>
+                        <span class="region-focus-lbl" id="radar-timestamp">Radar: Live Sync</span>
+                    </div>
+                    <div id="radar-map" class="radar-map-box"></div>
+                </section>
+
+                <div class="seismic-marine-col">
+                    <!-- Marine & Coastal Telemetry Card -->
+                    <section class="glass section-pad">
+                        <div class="section-header">
+                            <div class="section-title">
+                                <i class="ph-fill ph-boat" style="color: #38bdf8;"></i>
+                                <span>Marine & Coastal Swell (Open-Meteo Marine)</span>
+                            </div>
+                        </div>
+                        <div class="marine-metrics" id="marine-container">
+                            <div class="marine-box">
+                                <span class="qm-lbl">Wave Height</span>
+                                <span class="qm-val mono" id="marine-wave">-- m</span>
+                            </div>
+                            <div class="marine-box">
+                                <span class="qm-lbl">Swell Height</span>
+                                <span class="qm-val mono" id="marine-swell">-- m</span>
+                            </div>
+                            <div class="marine-box">
+                                <span class="qm-lbl">Wave Period</span>
+                                <span class="qm-val mono" id="marine-period">-- s</span>
+                            </div>
+                        </div>
+                        <div class="marine-advisory" id="marine-advisory">Syncing coastal wave telemetry...</div>
+                    </section>
+
+                    <!-- USGS Real-Time Earthquake & Tsunami Telemetry -->
+                    <section class="glass section-pad seismic-panel">
+                        <div class="section-header">
+                            <div class="section-title">
+                                <i class="ph-fill ph-activity" style="color: #f97316;"></i>
+                                <span>USGS Live Earthquakes (M4.0+ Feed)</span>
+                            </div>
+                            <a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener" class="ext-mini-link">USGS Live <i class="ph-bold ph-arrow-square-out"></i></a>
+                        </div>
+                        <div class="quake-list" id="quake-container"></div>
+                    </section>
+                </div>
             </div>
-            <div class="daily-list" id="daily-container"></div>
-        </section>
+        </div>
     </div>
 
-    <!-- Mobile Bottom Navigation Bar (iPhone / Android) -->
-    <nav class="mobile-bottom-nav">
-        <button class="mob-nav-item active" onclick="window.scrollTo({top:0, behavior:'smooth'})">
-            <i class="ph-fill ph-cloud-sun"></i>
-            <span>Weather</span>
-        </button>
-        <button class="mob-nav-item" onclick="document.getElementById('regional-sec').scrollIntoView({behavior:'smooth'})">
-            <i class="ph-fill ph-warning-diamond"></i>
-            <span>Hazards</span>
-        </button>
-        <button class="mob-nav-item" id="mob-audio-btn">
-            <i class="ph-fill ph-speaker-high"></i>
-            <span>Sound FX</span>
-        </button>
-        <button class="mob-nav-item" onclick="document.getElementById('weekly-sec').scrollIntoView({behavior:'smooth'})">
-            <i class="ph-fill ph-calendar"></i>
-            <span>7-Day</span>
-        </button>
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+        <button class="mob-nav-item active" data-mob-tab="overview"><i class="ph-fill ph-sun-horizon"></i><span>Weather</span></button>
+        <button class="mob-nav-item" data-mob-tab="rivers"><i class="ph-fill ph-waves"></i><span>Rivers</span></button>
+        <button class="mob-nav-item" data-mob-tab="hazards"><i class="ph-fill ph-shield-warning"></i><span>8 Hazards</span></button>
+        <button class="mob-nav-item" data-mob-tab="radar"><i class="ph-fill ph-globe-hemisphere-east"></i><span>Radar/Quake</span></button>
     </nav>
 
-    <script>
-        /* ==========================================================================
-           1. COUNTRY & STATE-BY-STATE DATABASE (SL, AUS, USA, UK, JP)
-           ========================================================================== */
-        const COUNTRY_PROFILES = {
-            LK: {
-                name: "Sri Lanka",
-                flag: "🇱🇰",
-                agency: "DMC / Irrigation Dept / NBRO",
-                hotlines: [
-                    { num: "117", lbl: "DMC Emergency" },
-                    { num: "1990", lbl: "Suwa Seriya" },
-                    { num: "119", lbl: "Police" }
-                ],
-                states: [
-                    { code: "WP", name: "Colombo (Western)", lat: 6.9271, lon: 79.8612 },
-                    { code: "SG", name: "Ratnapura (Sabaragamuwa)", lat: 6.6828, lon: 80.3992 },
-                    { code: "CP", name: "Kandy (Central)", lat: 7.2906, lon: 80.6337 },
-                    { code: "SP", name: "Galle (Southern)", lat: 6.0535, lon: 80.2210 },
-                    { code: "NE", name: "Nuwara Eliya (Hill Country)", lat: 6.9497, lon: 80.7891 },
-                    { code: "NP", name: "Jaffna (Northern)", lat: 9.6615, lon: 80.0255 },
-                    { code: "EP", name: "Trincomalee (Eastern)", lat: 8.5874, lon: 81.2152 }
-                ],
-                rivers: [
-                    { name: "Kelani Ganga", station: "Nagalagam St (WP)", lat: 6.9535, lon: 79.8780, unit: "ft", normalLvl: 2.2, alertLvl: 4.0, minorLvl: 5.0, majorLvl: 7.0, maxScale: 9.0, baseDischarge: 95 },
-                    { name: "Kalu Ganga", station: "Ratnapura (SG)", lat: 6.6828, lon: 80.3992, unit: "m", normalLvl: 3.1, alertLvl: 5.2, minorLvl: 7.5, majorLvl: 9.5, maxScale: 12.0, baseDischarge: 110 },
-                    { name: "Nilwala Ganga", station: "Panadugama (SP)", lat: 6.0830, lon: 80.5170, unit: "m", normalLvl: 2.8, alertLvl: 5.0, minorLvl: 6.0, majorLvl: 7.5, maxScale: 9.5, baseDischarge: 45 },
-                    { name: "Gin Ganga", station: "Baddegama (SP)", lat: 6.1830, lon: 80.1980, unit: "m", normalLvl: 2.1, alertLvl: 3.5, minorLvl: 4.0, majorLvl: 5.0, maxScale: 6.8, baseDischarge: 55 },
-                    { name: "Mahaweli Ganga", station: "Peradeniya (CP)", lat: 7.2690, lon: 80.5960, unit: "m", normalLvl: 2.6, alertLvl: 5.0, minorLvl: 7.0, majorLvl: 9.0, maxScale: 11.5, baseDischarge: 130 },
-                    { name: "Attanagalu Oya", station: "Dunamale (WP)", lat: 7.1160, lon: 80.0320, unit: "m", normalLvl: 1.9, alertLvl: 3.3, minorLvl: 4.4, majorLvl: 5.5, maxScale: 7.0, baseDischarge: 28 }
-                ]
-            },
-            AU: {
-                name: "Australia",
-                flag: "🇦🇺",
-                agency: "BOM / State SES / CFA & RFS Bushfire",
-                hotlines: [
-                    { num: "000", lbl: "Emergency" },
-                    { num: "132 500", lbl: "State SES Flood" },
-                    { num: "1800 679 737", lbl: "Bushfire Info" }
-                ],
-                states: [
-                    { code: "NSW", name: "Sydney (NSW)", lat: -33.8688, lon: 151.2093 },
-                    { code: "VIC", name: "Melbourne (VIC)", lat: -37.8136, lon: 144.9631 },
-                    { code: "QLD", name: "Brisbane (QLD)", lat: -27.4705, lon: 153.0260 },
-                    { code: "WA", name: "Perth (WA)", lat: -31.9505, lon: 115.8605 },
-                    { code: "SA", name: "Adelaide (SA)", lat: -34.9285, lon: 138.6007 },
-                    { code: "TAS", name: "Hobart (TAS)", lat: -42.8821, lon: 147.3272 },
-                    { code: "NT", name: "Darwin (NT)", lat: -12.4634, lon: 130.8456 },
-                    { code: "ACT", name: "Canberra (ACT)", lat: -35.2809, lon: 149.1300 }
-                ],
-                rivers: [
-                    { name: "Hawkesbury-Nepean", station: "Windsor (NSW)", lat: -33.6050, lon: 150.8200, unit: "m", normalLvl: 2.5, alertLvl: 5.8, minorLvl: 7.0, majorLvl: 12.2, maxScale: 15.0, baseDischarge: 85 },
-                    { name: "Brisbane River", station: "City Gauge (QLD)", lat: -27.4705, lon: 153.0260, unit: "m", normalLvl: 1.4, alertLvl: 2.3, minorLvl: 2.6, majorLvl: 3.5, maxScale: 5.0, baseDischarge: 70 },
-                    { name: "Yarra River", station: "Heidelberg (VIC)", lat: -37.7550, lon: 145.0700, unit: "m", normalLvl: 1.8, alertLvl: 3.2, minorLvl: 4.1, majorLvl: 5.5, maxScale: 7.0, baseDischarge: 40 },
-                    { name: "Murray River", station: "Echuca / Mildura (VIC/NSW)", lat: -36.1250, lon: 144.7500, unit: "m", normalLvl: 4.5, alertLvl: 7.5, minorLvl: 8.8, majorLvl: 9.6, maxScale: 11.5, baseDischarge: 160 },
-                    { name: "Swan River", station: "Barrack St (WA)", lat: -31.9590, lon: 115.8580, unit: "m", normalLvl: 0.9, alertLvl: 1.5, minorLvl: 1.8, majorLvl: 2.4, maxScale: 3.5, baseDischarge: 35 },
-                    { name: "Derwent River", station: "New Norfolk (TAS)", lat: -42.7800, lon: 147.0600, unit: "m", normalLvl: 1.6, alertLvl: 3.0, minorLvl: 4.0, majorLvl: 5.5, maxScale: 7.5, baseDischarge: 90 }
-                ]
-            },
-            US: {
-                name: "United States",
-                flag: "🇺🇸",
-                agency: "NOAA / National Weather Service / USGS",
-                hotlines: [
-                    { num: "911", lbl: "Emergency" },
-                    { num: "211", lbl: "Disaster Shelter" },
-                    { num: "1-800-621-3362", lbl: "FEMA" }
-                ],
-                states: [
-                    { code: "NY", name: "New York (NY)", lat: 40.7128, lon: -74.0060 },
-                    { code: "FL", name: "Miami (FL - Hurricane)", lat: 25.7617, lon: -80.1918 },
-                    { code: "CA", name: "Los Angeles (CA)", lat: 34.0522, lon: -118.2437 },
-                    { code: "TX", name: "Houston (TX)", lat: 29.7604, lon: -95.3698 },
-                    { code: "IL", name: "Chicago (IL)", lat: 41.8781, lon: -87.6298 },
-                    { code: "WA", name: "Seattle (WA)", lat: 47.6062, lon: -122.3321 }
-                ],
-                rivers: [
-                    { name: "Mississippi River", station: "Baton Rouge (LA)", lat: 30.4515, lon: -91.1871, unit: "ft", normalLvl: 18.0, alertLvl: 30.0, minorLvl: 35.0, majorLvl: 43.0, maxScale: 52.0, baseDischarge: 450 },
-                    { name: "Hudson River", station: "Battery (NY)", lat: 40.7006, lon: -74.0142, unit: "ft", normalLvl: 3.2, alertLvl: 6.0, minorLvl: 7.5, majorLvl: 9.5, maxScale: 12.0, baseDischarge: 180 },
-                    { name: "Potomac River", station: "Little Falls (DC)", lat: 38.9498, lon: -77.1276, unit: "ft", normalLvl: 3.8, alertLvl: 8.0, minorLvl: 10.0, majorLvl: 14.0, maxScale: 18.0, baseDischarge: 120 }
-                ]
-            },
-            GB: {
-                name: "United Kingdom",
-                flag: "🇬🇧",
-                agency: "Met Office / Environment Agency",
-                hotlines: [
-                    { num: "999", lbl: "Emergency" },
-                    { num: "0345 988 1188", lbl: "Floodline" },
-                    { num: "111", lbl: "NHS" }
-                ],
-                states: [
-                    { code: "ENG", name: "London (England)", lat: 51.5074, lon: -0.1278 },
-                    { code: "MAN", name: "Manchester (NW)", lat: 53.4808, lon: -2.2426 },
-                    { code: "SCT", name: "Edinburgh (Scotland)", lat: 55.9533, lon: -3.1883 },
-                    { code: "WLS", name: "Cardiff (Wales)", lat: 51.4816, lon: -3.1791 },
-                    { code: "NIR", name: "Belfast (N. Ireland)", lat: 54.5973, lon: -5.9301 }
-                ],
-                rivers: [
-                    { name: "River Thames", station: "Kingston (London)", lat: 51.4110, lon: -0.3080, unit: "m", normalLvl: 2.1, alertLvl: 3.8, minorLvl: 4.5, majorLvl: 5.4, maxScale: 6.8, baseDischarge: 75 },
-                    { name: "River Severn", station: "Worcester (Midlands)", lat: 52.1920, lon: -2.2250, unit: "m", normalLvl: 1.9, alertLvl: 4.0, minorLvl: 4.8, majorLvl: 5.8, maxScale: 7.2, baseDischarge: 95 },
-                    { name: "River Ouse", station: "York (North)", lat: 53.9580, lon: -1.0840, unit: "m", normalLvl: 1.4, alertLvl: 3.0, minorLvl: 3.9, majorLvl: 4.8, maxScale: 6.2, baseDischarge: 60 }
-                ]
-            },
-            JP: {
-                name: "Japan",
-                flag: "🇯🇵",
-                agency: "JMA (Japan Meteorological Agency) / MLIT",
-                hotlines: [
-                    { num: "119", lbl: "Fire / Ambulance" },
-                    { num: "110", lbl: "Police" },
-                    { num: "171", lbl: "Disaster Voice" }
-                ],
-                states: [
-                    { code: "TYO", name: "Tokyo (Kanto)", lat: 35.6762, lon: 139.6503 },
-                    { code: "OSA", name: "Osaka (Kansai)", lat: 34.6937, lon: 135.5023 },
-                    { code: "FUK", name: "Fukuoka (Kyushu)", lat: 33.5902, lon: 130.4017 },
-                    { code: "SAP", name: "Sapporo (Hokkaido)", lat: 43.0618, lon: 141.3545 }
-                ],
-                rivers: [
-                    { name: "Arakawa River", station: "Iwabuchi (Tokyo)", lat: 35.7840, lon: 139.7230, unit: "m", normalLvl: 2.1, alertLvl: 4.1, minorLvl: 5.5, majorLvl: 7.7, maxScale: 10.0, baseDischarge: 90 },
-                    { name: "Tone River", station: "Kurihashi (Kanto)", lat: 36.1400, lon: 139.6980, unit: "m", normalLvl: 2.5, alertLvl: 5.0, minorLvl: 6.8, majorLvl: 8.9, maxScale: 11.5, baseDischarge: 140 },
-                    { name: "Yodo River", station: "Hirakata (Osaka)", lat: 34.8140, lon: 135.6400, unit: "m", normalLvl: 1.9, alertLvl: 4.0, minorLvl: 5.2, majorLvl: 7.0, maxScale: 9.0, baseDischarge: 115 }
-                ]
-            }
-        };
-
-        const state = {
-            countryCode: 'LK',
-            stateCode: 'WP',
-            lat: 6.9271,
-            lon: 79.8612,
-            city: "Colombo (Western)",
-            unit: 'C',
-            simMode: 'live',
-            rawWeather: null,
-            rawAqi: null,
-            riverDischarges: [],
-            particleType: 'clear-day',
-            rainIntensity: 1,
-            audioEnabled: false
-        };
-
-        /* ==========================================================================
-           2. PROCEDURAL WEB AUDIO API SOUND ENGINE (Rain, Wind, Thunder, Siren)
-           ========================================================================== */
-        const SoundEngine = {
-            ctx: null,
-            masterGain: null,
-            rainGain: null,
-            windGain: null,
-            windFilter: null,
-            sirenOsc: null,
-            sirenGain: null,
-            isPlaying: false,
-
-            init() {
-                if (this.ctx) return;
-                const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                this.ctx = new AudioCtx();
-                this.masterGain = this.ctx.createGain();
-                this.masterGain.gain.value = 0.55;
-                this.masterGain.connect(this.ctx.destination);
-
-                // Create 3-second White Noise Buffer for Rain & Wind
-                const bufferSize = this.ctx.sampleRate * 3;
-                const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-                const output = noiseBuffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    output[i] = Math.random() * 2 - 1;
-                }
-
-                // 1. Rain Node (Bandpass filtered noise)
-                const rainSource = this.ctx.createBufferSource();
-                rainSource.buffer = noiseBuffer;
-                rainSource.loop = true;
-                const rainFilter = this.ctx.createBiquadFilter();
-                rainFilter.type = 'bandpass';
-                rainFilter.frequency.value = 1150;
-                rainFilter.Q.value = 0.65;
-                this.rainGain = this.ctx.createGain();
-                this.rainGain.gain.value = 0.001;
-                rainSource.connect(rainFilter);
-                rainFilter.connect(this.rainGain);
-                this.rainGain.connect(this.masterGain);
-                rainSource.start();
-
-                // 2. Wind Node (Lowpass modulated noise)
-                const windSource = this.ctx.createBufferSource();
-                windSource.buffer = noiseBuffer;
-                windSource.loop = true;
-                this.windFilter = this.ctx.createBiquadFilter();
-                this.windFilter.type = 'lowpass';
-                this.windFilter.frequency.value = 320;
-                this.windGain = this.ctx.createGain();
-                this.windGain.gain.value = 0.001;
-                windSource.connect(this.windFilter);
-                this.windFilter.connect(this.windGain);
-                this.windGain.connect(this.masterGain);
-                windSource.start();
-
-                // Modulate wind frequency slowly for realistic howling
-                setInterval(() => {
-                    if (!this.isPlaying || !this.ctx) return;
-                    const targetFreq = 220 + Math.random() * 350;
-                    this.windFilter.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 1.5);
-                }, 2500);
-            },
-
-            toggle() {
-                this.init();
-                if (this.ctx.state === 'suspended') this.ctx.resume();
-                this.isPlaying = !this.isPlaying;
-                state.audioEnabled = this.isPlaying;
-
-                const btn = document.getElementById('audio-btn');
-                const icon = document.getElementById('audio-icon');
-                const label = document.getElementById('audio-label');
-
-                if (this.isPlaying) {
-                    btn.classList.add('audio-active');
-                    icon.className = 'ph-fill ph-speaker-high';
-                    label.textContent = 'Sound FX: Live';
-                    this.updateMix();
-                } else {
-                    btn.classList.remove('audio-active');
-                    icon.className = 'ph-fill ph-speaker-slash';
-                    label.textContent = 'Sound FX: Off';
-                    this.rainGain.gain.setTargetAtTime(0.0001, this.ctx.currentTime, 0.3);
-                    this.windGain.gain.setTargetAtTime(0.0001, this.ctx.currentTime, 0.3);
-                }
-            },
-
-            updateMix() {
-                if (!this.isPlaying || !this.ctx) return;
-                const now = this.ctx.currentTime;
-                const type = state.particleType;
-
-                if (type === 'thunder') {
-                    this.rainGain.gain.setTargetAtTime(0.45, now, 0.8);
-                    this.windGain.gain.setTargetAtTime(0.38, now, 0.8);
-                } else if (type === 'rain') {
-                    this.rainGain.gain.setTargetAtTime(0.28 * state.rainIntensity, now, 0.8);
-                    this.windGain.gain.setTargetAtTime(0.15, now, 0.8);
-                } else {
-                    // Gentle ambient breeze for clear/cloudy weather
-                    this.rainGain.gain.setTargetAtTime(0.005, now, 0.8);
-                    this.windGain.gain.setTargetAtTime(0.08, now, 0.8);
-                }
-            },
-
-            playThunderClap() {
-                if (!this.isPlaying || !this.ctx) return;
-                const now = this.ctx.currentTime;
-
-                // Deep synthesized thunder rumble
-                const bufferSize = this.ctx.sampleRate * 2.5;
-                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.7));
-                }
-
-                const noise = this.ctx.createBufferSource();
-                noise.buffer = buffer;
-
-                const filter = this.ctx.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(190, now);
-                filter.frequency.exponentialRampToValueAtTime(45, now + 2.4);
-
-                const gain = this.ctx.createGain();
-                gain.gain.setValueAtTime(0.85, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 2.4);
-
-                noise.connect(filter);
-                filter.connect(gain);
-                gain.connect(this.masterGain);
-                noise.start(now);
-            },
-
-            playAlertChime() {
-                if (!this.isPlaying || !this.ctx) return;
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(520, now);
-                osc.frequency.linearRampToValueAtTime(880, now + 0.35);
-                gain.gain.setValueAtTime(0.12, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-                osc.connect(gain);
-                gain.connect(this.masterGain);
-                osc.start(now);
-                osc.stop(now + 0.5);
-            }
-        };
-
-        /* ==========================================================================
-           3. WMO CODES & HELPERS
-           ========================================================================== */
-        const WMO_CODES = {
-            0:  { desc: "Clear Sky", iconDay: "☀️", iconNight: "🌙", anim: "clear" },
-            1:  { desc: "Mainly Clear", iconDay: "🌤️", iconNight: "🌙", anim: "clear" },
-            2:  { desc: "Partly Cloudy", iconDay: "⛅", iconNight: "☁️", anim: "clouds" },
-            3:  { desc: "Overcast", iconDay: "☁️", iconNight: "☁️", anim: "clouds" },
-            45: { desc: "Fog / Mist", iconDay: "🌫️", iconNight: "🌫️", anim: "clouds" },
-            51: { desc: "Light Drizzle", iconDay: "🌦️", iconNight: "🌧️", anim: "rain" },
-            61: { desc: "Slight Rain", iconDay: "🌦️", iconNight: "🌧️", anim: "rain" },
-            63: { desc: "Moderate Rain", iconDay: "🌧️", iconNight: "🌧️", anim: "rain" },
-            65: { desc: "Heavy Downpour", iconDay: "🌧️", iconNight: "🌧️", anim: "rain" },
-            80: { desc: "Rain Showers", iconDay: "🌦️", iconNight: "🌧️", anim: "rain" },
-            82: { desc: "Violent Showers", iconDay: "⛈️", iconNight: "⛈️", anim: "thunder" },
-            95: { desc: "Thunderstorm", iconDay: "⛈️", iconNight: "⛈️", anim: "thunder" },
-            99: { desc: "Severe Storm", iconDay: "🌩️", iconNight: "🌩️", anim: "thunder" }
-        };
-
-        function getWMO(code, isDay = 1) {
-            const item = WMO_CODES[code] || { desc: "Partly Cloudy", iconDay: "⛅", iconNight: "☁️", anim: "clouds" };
-            return { desc: item.desc, icon: isDay ? item.iconDay : item.iconNight, anim: item.anim };
-        }
-
-        function formatTemp(c) {
-            return state.unit === 'F' ? Math.round((c * 9/5) + 32) + '°' : Math.round(c) + '°';
-        }
-
-        /* ==========================================================================
-           4. RENDER COUNTRY & STATE NAVIGATION BAR
-           ========================================================================== */
-        function renderRegionNavigation() {
-            const profile = COUNTRY_PROFILES[state.countryCode] || COUNTRY_PROFILES.LK;
-            document.getElementById('active-country-badge').textContent = `${profile.flag} ${profile.name}`;
-            document.getElementById('agency-label').textContent = `Agency: ${profile.agency}`;
-
-            // Render Hotlines
-            const hotlinesEl = document.getElementById('hotlines-container');
-            hotlinesEl.innerHTML = profile.hotlines.map(h => `
-                <a href="tel:${h.num.replace(/\s+/g,'')}" class="hotline-chip">
-                    <span class="hotline-num">${h.num}</span>
-                    <span class="hotline-lbl">${h.lbl}</span>
-                </a>
-            `).join('');
-
-            // Render State Pills
-            const pillsEl = document.getElementById('state-pills');
-            pillsEl.innerHTML = '';
-            profile.states.forEach((st, idx) => {
-                const btn = document.createElement('button');
-                btn.className = `state-pill ${st.code === state.stateCode ? 'active' : ''}`;
-                btn.textContent = st.name;
-                btn.addEventListener('click', () => {
-                    state.stateCode = st.code;
-                    document.querySelectorAll('.state-pill').forEach(p => p.classList.remove('active'));
-                    btn.classList.add('active');
-                    fetchAllData(st.lat, st.lon, st.name, state.countryCode);
-                });
-                pillsEl.appendChild(btn);
-            });
-        }
-
-        /* ==========================================================================
-           5. FETCH WEATHER, AIR QUALITY & REGIONAL RIVER FLOOD API
-           ========================================================================== */
-        async function fetchAllData(lat, lon, cityName, forcedCountryCode = null) {
-            showLoader(true);
-            try {
-                if (forcedCountryCode && COUNTRY_PROFILES[forcedCountryCode]) {
-                    state.countryCode = forcedCountryCode;
-                }
-                const profile = COUNTRY_PROFILES[state.countryCode] || COUNTRY_PROFILES.LK;
-
-                const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,surface_pressure,wind_speed_10m,wind_gusts_10m&hourly=temperature_2m,precipitation_probability,weather_code,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&timezone=auto`;
-
-                const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=european_aqi,pm2_5`;
-
-                const rLats = profile.rivers.map(r => r.lat).join(',');
-                const rLons = profile.rivers.map(r => r.lon).join(',');
-                const floodUrl = `https://flood-api.open-meteo.com/v1/flood?latitude=${rLats}&longitude=${rLons}&daily=river_discharge&forecast_days=2`;
-
-                const [weatherRes, aqiRes, floodRes] = await Promise.all([
-                    fetch(weatherUrl),
-                    fetch(aqiUrl).catch(() => null),
-                    fetch(floodUrl).catch(() => null)
-                ]);
-
-                const weatherData = await weatherRes.json();
-                const aqiData = aqiRes && aqiRes.ok ? await aqiRes.json() : null;
-                const floodData = floodRes && floodRes.ok ? await floodRes.json() : null;
-
-                state.lat = lat;
-                state.lon = lon;
-                if (cityName) state.city = cityName;
-                state.rawWeather = weatherData;
-                state.rawAqi = aqiData;
-
-                state.riverDischarges = profile.rivers.map((r, idx) => {
-                    if (Array.isArray(floodData) && floodData[idx]?.daily?.river_discharge) {
-                        return floodData[idx].daily.river_discharge[0] ?? r.baseDischarge;
-                    }
-                    return r.baseDischarge;
-                });
-
-                renderRegionNavigation();
-                renderDashboard();
-            } catch (err) {
-                console.error(err);
-            } finally {
-                showLoader(false);
-            }
-        }
-
-        /* ==========================================================================
-           6. RENDER DASHBOARD & ADAPTIVE COUNTRY MODULES
-           ========================================================================== */
-        function renderDashboard() {
-            const data = state.rawWeather;
-            if (!data) return;
-
-            const current = data.current;
-            const daily = data.daily;
-            const hourly = data.hourly;
-            const isDay = current.is_day;
-
-            let tempC = current.temperature_2m;
-            let humidity = current.relative_humidity_2m;
-            let rain24h = daily.precipitation_sum[0] || 0;
-            let windSpeed = current.wind_speed_10m || 0;
-            let windGusts = current.wind_gusts_10m || windSpeed;
-            let weatherCode = current.weather_code;
-
-            // Simulation overrides (Adapts to Australia Bushfire/Storm vs Sri Lanka Flood)
-            if (state.simMode === 'yellow') {
-                rain24h = Math.max(rain24h, 42);
-                windGusts = Math.max(windGusts, 45);
-                weatherCode = 63;
-            } else if (state.simMode === 'orange') {
-                if (state.countryCode === 'AU') {
-                    tempC = Math.max(tempC, 38);
-                    humidity = 16;
-                    windGusts = 65;
-                } else {
-                    rain24h = Math.max(rain24h, 85);
-                    windGusts = 62;
-                    weatherCode = 65;
-                }
-            } else if (state.simMode === 'red') {
-                if (state.countryCode === 'AU') {
-                    tempC = Math.max(tempC, 43);
-                    humidity = 9;
-                    windSpeed = 55;
-                    windGusts = 88;
-                    rain24h = Math.max(rain24h, 115);
-                    weatherCode = 95;
-                } else {
-                    rain24h = Math.max(rain24h, 165);
-                    windSpeed = 58;
-                    windGusts = 90;
-                    weatherCode = 99;
-                }
-                SoundEngine.playAlertChime();
-            }
-
-            const wmo = getWMO(weatherCode, isDay);
-
-            // Header & Hero
-            document.getElementById('loc-name').textContent = state.city;
-            document.getElementById('current-temp').textContent = formatTemp(tempC);
-            document.getElementById('current-icon').textContent = wmo.icon;
-            document.getElementById('current-desc').textContent = wmo.desc;
-            document.getElementById('temp-max').textContent = formatTemp(daily.temperature_2m_max[0]);
-            document.getElementById('temp-min').textContent = formatTemp(daily.temperature_2m_min[0]);
-            document.getElementById('feels-like').textContent = formatTemp(current.apparent_temperature);
-            document.getElementById('current-date').textContent = new Date().toLocaleString('en-US', {
-                weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: data.timezone
-            });
-
-            // Climate Tag
-            const climateTag = document.getElementById('climate-tag');
-            if (state.countryCode === 'AU') {
-                climateTag.innerHTML = `<i class="ph-fill ph-sun-horizon"></i> <span>BOM Southern Hemisphere Telemetry</span>`;
-            } else if (state.countryCode === 'LK') {
-                climateTag.innerHTML = `<i class="ph-fill ph-wind"></i> <span>Sri Lanka Monsoon & Basin Telemetry</span>`;
-            } else {
-                climateTag.innerHTML = `<i class="ph-fill ph-globe"></i> <span>Regional Meteorological Telemetry</span>`;
-            }
-
-            // Hourly
-            const nowISO = current.time.slice(0, 13);
-            let currentHourIdx = hourly.time.findIndex(t => t.startsWith(nowISO));
-            if (currentHourIdx === -1) currentHourIdx = 0;
-
-            document.getElementById('rain-24h-badge').textContent = `24h Precip: ${rain24h.toFixed(1)} mm`;
-            const hourlyContainer = document.getElementById('hourly-container');
-            hourlyContainer.innerHTML = '';
-            for (let i = currentHourIdx; i < currentHourIdx + 24 && i < hourly.time.length; i++) {
-                const dateObj = new Date(hourly.time[i]);
-                const hourLabel = i === currentHourIdx ? 'Now' : dateObj.toLocaleTimeString([], { hour: 'numeric', hour12: true });
-                const hWmo = getWMO(hourly.weather_code[i], hourly.is_day[i]);
-                const pop = hourly.precipitation_probability[i];
-
-                const div = document.createElement('div');
-                div.className = `hour-item ${i === currentHourIdx ? 'now' : ''}`;
-                div.innerHTML = `
-                    <span class="hour-time">${hourLabel}</span>
-                    <span class="hour-icon">${hWmo.icon}</span>
-                    <span class="hour-pop">${pop > 15 ? `${pop}%` : ''}</span>
-                    <span class="hour-temp">${formatTemp(hourly.temperature_2m[i])}</span>
-                `;
-                hourlyContainer.appendChild(div);
-            }
-
-            // Metrics (UV with Australian Burn Timer + Air Quality)
-            const uv = Math.max(hourly.uv_index[currentHourIdx] || 0, state.simMode === 'red' && state.countryCode === 'AU' ? 12.5 : 0);
-            document.getElementById('uv-val').textContent = uv.toFixed(1);
-            const burnMins = uv > 2 ? Math.max(Math.round(200 / (uv * 1.5)), 8) : null;
-            document.getElementById('uv-desc').textContent = burnMins ? `Skin burn in ~${burnMins} mins` : "Low UV risk";
-
-            document.getElementById('wind-val').textContent = `${Math.round(windSpeed)} km/h`;
-            document.getElementById('wind-dir').textContent = `Gusts: ${Math.round(windGusts)} km/h`;
-
-            const aqi = state.rawAqi?.current?.european_aqi ?? 24;
-            const pm25 = state.rawAqi?.current?.pm2_5 ?? 8.2;
-            document.getElementById('aqi-val').textContent = `AQI ${aqi}`;
-            document.getElementById('aqi-desc').textContent = `PM2.5: ${pm25} µg/m³ (${aqi < 40 ? 'Good' : 'Moderate'})`;
-
-            document.getElementById('hum-val').textContent = `${humidity}%`;
-            document.getElementById('rain-val').textContent = `${rain24h.toFixed(1)} mm`;
-            document.getElementById('press-val').textContent = `${Math.round(current.surface_pressure)} hPa`;
-
-            // Render Country-Specific Risk Widgets & Rivers
-            const highestRiverStatus = renderRegionalCommandCenter(tempC, humidity, windGusts, rain24h);
-
-            // Update Banner & Audio/Visual Effects
-            updateBannerAndFX(tempC, humidity, windGusts, rain24h, highestRiverStatus, wmo.anim, isDay);
-
-            // 7-Day Forecast
-            const dailyContainer = document.getElementById('daily-container');
-            dailyContainer.innerHTML = '';
-            const weekMin = Math.min(...daily.temperature_2m_min);
-            const weekMax = Math.max(...daily.temperature_2m_max);
-            const range = Math.max(weekMax - weekMin, 1);
-
-            for (let i = 0; i < daily.time.length; i++) {
-                const dDate = new Date(daily.time[i] + 'T00:00:00');
-                const dayName = i === 0 ? 'Today' : dDate.toLocaleDateString('en-US', { weekday: 'short' });
-                const dWmo = getWMO(daily.weather_code[i], 1);
-                const pop = daily.precipitation_probability_max[i];
-                const tMin = daily.temperature_2m_min[i];
-                const tMax = daily.temperature_2m_max[i];
-
-                const leftPercent = ((tMin - weekMin) / range) * 100;
-                const widthPercent = ((tMax - tMin) / range) * 100;
-
-                const row = document.createElement('div');
-                row.className = 'day-row';
-                row.innerHTML = `
-                    <div class="day-name">${dayName}</div>
-                    <div class="day-condition">
-                        <span>${dWmo.icon}</span>
-                        ${pop > 20 ? `<span class="day-pop">${pop}%</span>` : ''}
-                    </div>
-                    <div class="day-temps">
-                        <span class="t-min">${formatTemp(tMin)}</span>
-                        <div class="temp-bar-wrapper">
-                            <div class="temp-bar-fill" style="left: ${leftPercent}%; width: ${Math.max(widthPercent, 8)}%;"></div>
-                        </div>
-                        <span class="t-max">${formatTemp(tMax)}</span>
-                    </div>
-                `;
-                dailyContainer.appendChild(row);
-            }
-        }
-
-        /* ==========================================================================
-           7. ADAPTIVE REGIONAL COMMAND CENTER (Australia Bushfire vs SL Flood)
-           ========================================================================== */
-        function renderRegionalCommandCenter(tempC, humidity, windGusts, rain24h) {
-            const profile = COUNTRY_PROFILES[state.countryCode] || COUNTRY_PROFILES.LK;
-            const widgetsContainer = document.getElementById('regional-risk-widgets');
-            const riversContainer = document.getElementById('rivers-container');
-
-            // 1. Render River Cards for the active Country
-            riversContainer.innerHTML = '';
-            let highestStatus = 'normal';
-            let maxFloodPct = 18;
-
-            profile.rivers.forEach((river, idx) => {
-                let rawDischarge = state.riverDischarges[idx] || river.baseDischarge;
-                let ratio = rawDischarge / river.baseDischarge;
-                let level = river.normalLvl * (0.75 + 0.25 * Math.min(ratio, 3.2)) + (rain24h * 0.015);
-
-                if (state.simMode === 'yellow') level = river.alertLvl + 0.25;
-                if (state.simMode === 'orange') level = river.minorLvl + 0.35;
-                if (state.simMode === 'red') level = river.majorLvl + 0.55;
-
-                level = Math.min(level, river.maxScale * 0.95);
-
-                let status = 'normal', badgeText = 'NORMAL', badgeClass = 'badge-normal', waveColor = 'rgba(16, 185, 129, 0.42)';
-                if (level >= river.majorLvl) {
-                    status = 'red'; badgeText = '🔴 MAJOR FLOOD'; badgeClass = 'badge-red'; waveColor = 'rgba(239, 68, 68, 0.55)';
-                    highestStatus = 'red';
-                } else if (level >= river.minorLvl) {
-                    status = 'orange'; badgeText = '🟠 MINOR FLOOD'; badgeClass = 'badge-orange'; waveColor = 'rgba(249, 115, 22, 0.50)';
-                    if (highestStatus !== 'red') highestStatus = 'orange';
-                } else if (level >= river.alertLvl) {
-                    status = 'yellow'; badgeText = '🟡 WATCH'; badgeClass = 'badge-yellow'; waveColor = 'rgba(250, 204, 21, 0.45)';
-                    if (highestStatus === 'normal') highestStatus = 'yellow';
-                }
-
-                const fillPct = Math.min(Math.max((level / river.maxScale) * 100, 18), 94);
-                maxFloodPct = Math.max(maxFloodPct, Math.round((level / river.majorLvl) * 85));
-
-                const card = document.createElement('div');
-                card.className = `river-card status-${status}`;
-                card.innerHTML = `
-                    <div class="water-tank" style="height: ${fillPct}%;">
-                        <svg class="water-wave-svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
-                            <path d="M0,60 C300,0 300,120 600,60 C900,0 900,120 1200,60 L1200,120 L0,120 Z" fill="${waveColor}"></path>
-                        </svg>
-                        <div class="water-body" style="background: ${waveColor};"></div>
-                    </div>
-                    <div class="river-content-top">
-                        <div class="river-header">
-                            <div>
-                                <div class="river-name">${river.name}</div>
-                                <div class="river-station"><i class="ph-fill ph-map-pin"></i> ${river.station}</div>
-                            </div>
-                            <span class="river-badge ${badgeClass}">${badgeText}</span>
-                        </div>
-                    </div>
-                    <div class="river-content-bottom">
-                        <div class="river-readings">
-                            <div>
-                                <span class="water-level-val">${level.toFixed(2)}</span>
-                                <span class="water-level-unit">${river.unit}</span>
-                            </div>
-                            <div class="discharge-info">
-                                <div>Flow: <strong>${Math.round(rawDischarge)} m³/s</strong></div>
-                                <div>Minor: ${river.minorLvl}${river.unit} | Major: ${river.majorLvl}${river.unit}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                riversContainer.appendChild(card);
-            });
-
-            // 2. Render Country-Specific Top Widgets
-            if (state.countryCode === 'AU') {
-                // AUSTRALIA: BOM / CFA Bushfire Danger Rating Semicircle Gauge + SES Flood Index
-                const fireIndex = Math.min(Math.max(Math.round((tempC * 1.4) + (windGusts * 0.7) - (humidity * 0.6)), 10), 100);
-                let fireRating = "MODERATE", fireClass = "badge-normal", needleDeg = -65;
-                if (fireIndex >= 85) { fireRating = "🔴 CATASTROPHIC"; fireClass = "badge-red"; needleDeg = 75; }
-                else if (fireIndex >= 65) { fireRating = "🟠 EXTREME"; fireClass = "badge-orange"; needleDeg = 35; }
-                else if (fireIndex >= 45) { fireRating = "🟡 HIGH"; fireClass = "badge-yellow"; needleDeg = -15; }
-
-                widgetsContainer.innerHTML = `
-                    <div class="risk-box">
-                        <div class="fire-gauge-wrapper">
-                            <div class="fire-dial">
-                                <div class="fire-dial-arc"></div>
-                                <div class="fire-needle" style="transform: rotate(${needleDeg}deg);"></div>
-                            </div>
-                            <div style="flex:1;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                    <strong style="font-size:0.98rem;">🔥 Australian Bushfire Danger Rating</strong>
-                                    <span class="river-badge ${fireClass}">${fireRating}</span>
-                                </div>
-                                <div style="font-size:0.78rem; color:var(--text-secondary);">
-                                    AFDRS Index (${fireIndex}/100) • Calculated from Temp (${Math.round(tempC)}°C), RH (${humidity}%) & Wind Gusts (${Math.round(windGusts)} km/h)
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="risk-box">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <strong style="font-size:0.98rem;">🌊 State SES River & Flash Flood Watch</strong>
-                                <div style="font-size:0.78rem; color:var(--text-secondary);">Monitors NSW, QLD, VIC & WA catchment telemetry</div>
-                            </div>
-                            <span class="river-badge ${maxFloodPct > 75 ? 'badge-red' : 'badge-normal'}">${maxFloodPct}% INDEX</span>
-                        </div>
-                        <div class="risk-meter-bar">
-                            <div class="risk-meter-fill" style="width:${maxFloodPct}%; background:${maxFloodPct > 75 ? '#ef4444' : '#38bdf8'};"></div>
-                        </div>
-                    </div>
-                `;
-            } else {
-                // SRI LANKA & GLOBAL: Urban/Basin Flood Risk + NBRO Landslide Slope Saturation
-                const lsPct = Math.min(Math.round((rain24h / 140) * 100), 100);
-                widgetsContainer.innerHTML = `
-                    <div class="risk-box">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <strong style="font-size:0.98rem;">🌊 Basin & Urban Flood Risk Index</strong>
-                                <div style="font-size:0.78rem; color:var(--text-secondary);">Real-time satellite river discharge & 24h precipitation</div>
-                            </div>
-                            <span class="river-badge ${maxFloodPct > 75 ? 'badge-red' : maxFloodPct > 55 ? 'badge-orange' : 'badge-normal'}">${maxFloodPct}% RISK</span>
-                        </div>
-                        <div class="risk-meter-bar">
-                            <div class="risk-meter-fill" style="width:${maxFloodPct}%; background:${maxFloodPct > 75 ? '#ef4444' : '#10b981'};"></div>
-                        </div>
-                    </div>
-                    <div class="risk-box">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <strong style="font-size:0.98rem;">⛰️ Slope Saturation & Landslide Watch</strong>
-                                <div style="font-size:0.78rem; color:var(--text-secondary);">Hill country & escarpment soil moisture threshold (75mm+)</div>
-                            </div>
-                            <span class="river-badge ${lsPct > 75 ? 'badge-red' : lsPct > 45 ? 'badge-yellow' : 'badge-normal'}">${lsPct}% SATURATION</span>
-                        </div>
-                        <div class="risk-meter-bar">
-                            <div class="risk-meter-fill" style="width:${Math.max(lsPct, 12)}%; background:${lsPct > 75 ? '#ef4444' : '#f59e0b'};"></div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            return highestStatus;
-        }
-
-        function updateBannerAndFX(tempC, humidity, windGusts, rain24h, riverStatus, animType, isDay) {
-            const banner = document.getElementById('alert-banner');
-            const pill = document.getElementById('alert-pill');
-            const title = document.getElementById('alert-title');
-            const desc = document.getElementById('alert-desc');
-            const profile = COUNTRY_PROFILES[state.countryCode] || COUNTRY_PROFILES.LK;
-
-            let level = 'green';
-            if (riverStatus === 'red' || rain24h >= 100 || windGusts >= 80 || (state.countryCode === 'AU' && tempC >= 41)) level = 'red';
-            else if (riverStatus === 'orange' || rain24h >= 50 || windGusts >= 60 || (state.countryCode === 'AU' && tempC >= 37)) level = 'orange';
-            else if (riverStatus === 'yellow' || rain24h >= 30 || windGusts >= 42) level = 'yellow';
-
-            banner.className = `alert-banner glass level-${level}`;
-            document.body.classList.toggle('red-alert-active', level === 'red');
-
-            if (level === 'red') {
-                pill.textContent = `🔴 RED EMERGENCY • ${profile.name.toUpperCase()}`;
-                title.textContent = state.countryCode === 'AU'
-                    ? 'Catastrophic Bushfire / Severe Storm & Flood Emergency'
-                    : 'Major Flood, Cyclone & Landslide Emergency Warning';
-                desc.textContent = `Critical weather thresholds exceeded in ${state.city}. Follow ${profile.agency} evacuation directives immediately.`;
-                state.rainIntensity = 3.0;
-                updateThemeAndParticles('thunder', 0);
-            } else if (level === 'orange') {
-                pill.textContent = `🟠 ORANGE WARNING • BE PREPARED`;
-                title.textContent = state.countryCode === 'AU'
-                    ? 'Extreme Fire Danger / Heavy Swell & Flood Watch'
-                    : 'Amber Warning: Minor River Flooding & Heavy Rain';
-                desc.textContent = `Severe conditions detected across ${state.city}. Prepare emergency plans and monitor ${profile.agency} bulletins.`;
-                state.rainIntensity = 2.0;
-                updateThemeAndParticles('rain', isDay);
-            } else if (level === 'yellow') {
-                pill.textContent = `🟡 YELLOW WATCH • BE AWARE`;
-                title.textContent = `Regional Weather & Hydrological Watch Active`;
-                desc.textContent = `Elevated wind gusts (${Math.round(windGusts)} km/h) or rising river levels detected.`;
-                state.rainIntensity = 1.3;
-                updateThemeAndParticles('rain', isDay);
-            } else {
-                pill.textContent = `🟢 GREEN • ALL CLEAR`;
-                title.textContent = `No Active Severe Weather Warnings in ${state.city}`;
-                desc.textContent = `${profile.agency} telemetry and regional river gauges are operating within normal safety parameters.`;
-                state.rainIntensity = 1.0;
-                updateThemeAndParticles(animType, isDay);
-            }
-
-            SoundEngine.updateMix();
-        }
-
-        /* ==========================================================================
-           8. CANVAS PARTICLE ENGINE (Synced with Thunder Audio)
-           ========================================================================== */
-        const canvas = document.getElementById('weather-canvas');
-        const ctx = canvas.getContext('2d');
-        let particles = [];
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        function updateThemeAndParticles(animType, isDay) {
-            const isRed = document.body.classList.contains('red-alert-active');
-            document.body.className = isRed ? 'red-alert-active' : '';
-
-            if (animType === 'thunder') {
-                document.body.classList.add('theme-thunder');
-                state.particleType = 'thunder';
-            } else if (animType === 'rain') {
-                document.body.classList.add('theme-rain');
-                state.particleType = 'rain';
-            } else {
-                document.body.classList.add(isDay ? 'theme-clear-day' : 'theme-clear-night');
-                state.particleType = isDay ? 'sun-motes' : 'stars';
-            }
-
-            particles = [];
-            const count = (state.particleType === 'rain' || state.particleType === 'thunder') ? Math.floor(130 * state.rainIntensity) : 65;
-            for (let i = 0; i < count; i++) {
-                particles.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    vy: Math.random() * 2 + 1,
-                    size: Math.random() * 2.5 + 1,
-                    alpha: Math.random() * 0.7 + 0.2
-                });
-            }
-        }
-
-        function animateCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const type = state.particleType;
-
-            if (type === 'rain' || type === 'thunder') {
-                ctx.strokeStyle = 'rgba(186, 230, 253, 0.55)';
-                ctx.lineWidth = 1.5;
-                for (let p of particles) {
-                    ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(p.x - 4, p.y + 18);
-                    ctx.stroke();
-                    p.y += 15 * state.rainIntensity * 0.7;
-                    p.x -= 2;
-                    if (p.y > canvas.height) {
-                        p.y = -20;
-                        p.x = Math.random() * canvas.width;
-                    }
-                }
-
-                // Lightning Flash + Synced Procedural Thunder Audio!
-                const flashProb = state.simMode === 'red' ? 0.012 : type === 'thunder' ? 0.004 : 0;
-                if (Math.random() < flashProb) {
-                    const flash = document.getElementById('lightning');
-                    flash.style.opacity = '0.45';
-                    setTimeout(() => { flash.style.opacity = '0'; }, 80);
-                    SoundEngine.playThunderClap();
-                }
-            } else {
-                for (let p of particles) {
-                    ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha * 0.35})`;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    ctx.fill();
-                    p.y -= 0.3;
-                    if (p.y < -10) p.y = canvas.height + 10;
-                }
-            }
-            requestAnimationFrame(animateCanvas);
-        }
-
-        /* ==========================================================================
-           9. UI EVENTS & COUNTRY SWITCHING
-           ========================================================================== */
-        document.querySelectorAll('.country-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.country-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                const cCode = tab.dataset.country;
-                state.countryCode = cCode;
-                const firstState = COUNTRY_PROFILES[cCode].states[0];
-                state.stateCode = firstState.code;
-                fetchAllData(firstState.lat, firstState.lon, firstState.name, cCode);
-            });
-        });
-
-        document.getElementById('audio-btn').addEventListener('click', () => SoundEngine.toggle());
-        document.getElementById('mob-audio-btn').addEventListener('click', () => SoundEngine.toggle());
-
-        document.getElementById('sim-mode').addEventListener('change', (e) => {
-            state.simMode = e.target.value;
-            renderDashboard();
-        });
-
-        document.getElementById('unit-btn').addEventListener('click', () => {
-            state.unit = state.unit === 'C' ? 'F' : 'C';
-            document.getElementById('unit-label').textContent = `°${state.unit}`;
-            renderDashboard();
-        });
-
-        document.getElementById('install-btn').addEventListener('click', () => {
-            document.getElementById('install-modal').classList.add('active');
-        });
-        document.getElementById('close-modal').addEventListener('click', () => {
-            document.getElementById('install-modal').classList.remove('active');
-        });
-
-        // Search Bar with Automatic Country Profile Detection
-        const cityInput = document.getElementById('city-input');
-        const searchResults = document.getElementById('search-results');
-        let searchTimeout = null;
-
-        cityInput.addEventListener('input', (e) => {
-            const q = e.target.value.trim();
-            clearTimeout(searchTimeout);
-            if (q.length < 2) {
-                searchResults.classList.remove('active');
-                return;
-            }
-            searchTimeout = setTimeout(async () => {
-                try {
-                    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=en&format=json`);
-                    const data = await res.json();
-                    searchResults.innerHTML = '';
-                    if (!data.results) return;
-                    data.results.forEach(place => {
-                        const div = document.createElement('div');
-                        div.className = 'search-item';
-                        div.innerHTML = `
-                            <div>
-                                <strong>${place.name}</strong>
-                                <div style="font-size:0.78rem; color:var(--text-secondary);">${[place.admin1, place.country].filter(Boolean).join(', ')}</div>
-                            </div>
-                            <span style="font-size:0.75rem; color:#38bdf8;">${place.country_code || ''}</span>
-                        `;
-                        div.addEventListener('click', () => {
-                            cityInput.value = '';
-                            searchResults.classList.remove('active');
-                            const cCode = place.country_code && COUNTRY_PROFILES[place.country_code] ? place.country_code : state.countryCode;
-                            document.querySelectorAll('.country-tab').forEach(t => {
-                                t.classList.toggle('active', t.dataset.country === cCode);
-                            });
-                            fetchAllData(place.latitude, place.longitude, `${place.name} (${place.admin1 || place.country})`, cCode);
-                        });
-                        searchResults.appendChild(div);
-                    });
-                    searchResults.classList.add('active');
-                } catch (err) {
-                    console.error(err);
-                }
-            }, 280);
-        });
-
-        function showLoader(visible) {
-            const loader = document.getElementById('loader');
-            loader.style.opacity = visible ? '1' : '0';
-            loader.style.pointerEvents = visible ? 'all' : 'none';
-        }
-
-        // Start App
-        animateCanvas();
-        fetchAllData(state.lat, state.lon, state.city, 'LK');
-    </script>
+    <!-- Application Scripts -->
+    <script src="data.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
