@@ -303,3 +303,309 @@ Keeps existing glass / severity design language.
     height: 340px;
   }
 }
+
+/* ==========================================================================
+   RIVERNET 39-STATION SMART UPGRADE STYLES
+   Paste at bottom of style.css
+   ========================================================================== */
+
+#rivers-container,
+#rivers-container.rivers-grid {
+  display: block !important;
+}
+
+.river-summary-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.river-summary-item {
+  background: rgba(15, 23, 42, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 12px 10px;
+  text-align: center;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.river-summary-item.blue { border-color: rgba(56, 189, 248, 0.35); }
+.river-summary-item.green { border-color: rgba(16, 185, 129, 0.35); }
+.river-summary-item.yellow { border-color: rgba(250, 204, 21, 0.45); }
+.river-summary-item.orange { border-color: rgba(249, 115, 22, 0.50); }
+.river-summary-item.red { border-color: rgba(239, 68, 68, 0.55); }
+.river-summary-item.gray { border-color: rgba(148, 163, 184, 0.35); }
+
+.river-summary-value {
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.river-summary-item.blue .river-summary-value { color: #38bdf8; }
+.river-summary-item.green .river-summary-value { color: #34d399; }
+.river-summary-item.yellow .river-summary-value { color: #fde047; }
+.river-summary-item.orange .river-summary-value { color: #fb923c; }
+.river-summary-item.red .river-summary-value { color: #fca5a5; }
+.river-summary-item.gray .river-summary-value { color: #94a3b8; }
+
+.river-summary-label {
+  margin-top: 5px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+}
+
+.river-status-filters {
+  margin-bottom: 14px;
+}
+
+.river-status-btn {
+  padding: 6px 12px;
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.river-status-btn:hover,
+.river-status-btn.active {
+  background: #38bdf8;
+  color: #090d16;
+  border-color: #38bdf8;
+}
+
+.river-filter-count {
+  opacity: 0.82;
+  font-weight: 900;
+}
+
+.river-disclaimer {
+  margin-bottom: 14px;
+  padding: 11px 13px;
+  border-radius: 16px;
+  border: 1px solid rgba(250, 204, 21, 0.28);
+  background: rgba(250, 204, 21, 0.08);
+  color: #fde68a;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.river-section {
+  margin-bottom: 14px;
+}
+
+.river-empty {
+  padding: 16px;
+  border-radius: 18px;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+.river-split {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.river-list-col,
+.river-map-col {
+  min-width: 0;
+}
+
+.river-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 560px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+
+.river-row {
+  display: grid;
+  grid-template-columns: 1.05fr 1.45fr;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.river-row:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.river-row.status-green { border-left: 4px solid #10b981; }
+.river-row.status-yellow { border-left: 4px solid #facc15; }
+.river-row.status-orange { border-left: 4px solid #f97316; }
+.river-row.status-red { border-left: 4px solid #ef4444; }
+.river-row.status-gray { border-left: 4px solid #64748b; }
+
+.river-row-name {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.river-row-sub {
+  margin-top: 3px;
+  font-size: 0.70rem;
+  color: var(--text-secondary);
+}
+
+.river-row-meter {
+  min-width: 0;
+}
+
+.river-threshold-track {
+  position: relative;
+  height: 8px;
+  width: 100%;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+  overflow: visible;
+  margin-bottom: 8px;
+}
+
+.river-threshold-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.7s ease;
+}
+
+.river-threshold-mark {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 16px;
+  border-radius: 2px;
+  opacity: 0.9;
+}
+
+.river-threshold-mark.alert { background: #facc15; }
+.river-threshold-mark.minor { background: #f97316; }
+.river-threshold-mark.major { background: #ef4444; }
+
+.river-row-readout {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.river-row-level {
+  font-size: 0.86rem;
+  font-weight: 900;
+  color: #e2e8f0;
+}
+
+.sev-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.prov-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  color: #fde68a;
+  background: rgba(250, 204, 21, 0.14);
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  white-space: nowrap;
+}
+
+.prov-tag.small {
+  font-size: 0.54rem;
+  padding: 1px 6px;
+}
+
+.river-map-box {
+  width: 100%;
+  height: 580px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #090d16;
+  box-shadow: var(--glass-shadow);
+  position: relative;
+  z-index: 2;
+}
+
+#river-map {
+  width: 100%;
+  height: 100%;
+}
+
+.river-map-fallback {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  padding: 20px;
+  text-align: center;
+}
+
+.sev-pill.gray {
+  background: rgba(100, 116, 139, 0.22);
+  color: #cbd5e1;
+  border: 1px solid rgba(100, 116, 139, 0.55);
+}
+
+.river-card.status-gray {
+  border-color: rgba(100, 116, 139, 0.45);
+}
+
+@media (max-width: 1024px) {
+  .river-split {
+    grid-template-columns: 1fr;
+  }
+
+  .river-map-box {
+    height: 420px;
+  }
+}
+
+@media (max-width: 640px) {
+  .river-summary-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .river-row {
+    grid-template-columns: 1fr;
+  }
+
+  .river-list {
+    max-height: none;
+  }
+
+  .river-map-box {
+    height: 340px;
+  }
+}
