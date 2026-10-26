@@ -1,298 +1,298 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Atmosphere Pro">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#090d16">
-    <title>Atmosphere Global Pro | Weather, RiverNet.lk, Seismic & Radar Telemetry</title>
-    
-    <!-- Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
-    <!-- Leaflet Interactive GIS Map CSS & JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Atmosphere Global Pro | Weather, RiverNet, Seismic & Radar Telemetry</title>
+  <meta name="description" content="Real-time adaptive weather, RiverNet gauge telemetry, UV sun safety, air quality, marine, seismic and smart regional alerts." />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Atmosphere" />
 
-    <!-- Custom Stylesheet -->
-    <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/index.css" />
+  <link rel="stylesheet" href="./style.css" />
 </head>
-<body class="theme-clear-day">
-    <canvas id="weather-canvas"></canvas>
-    <div id="lightning"></div>
-    <div id="danger-vignette"></div>
+<body>
+  <div id="loader">
+    <div class="spinner"></div>
+    <div style="font-size:0.82rem;color:var(--text-secondary);">Syncing satellite telemetry…</div>
+  </div>
 
-    <div id="loader" aria-live="polite">
-        <div class="spinner"></div>
-        <p id="loader-text">Syncing Satellite Weather, RiverNet.lk, Marine & USGS Seismic Telemetry...</p>
+  <canvas id="weather-canvas"></canvas>
+  <div id="lightning"></div>
+  <div id="danger-vignette"></div>
+
+  <div class="app-container">
+    <header>
+      <div class="brand">
+        <div class="brand-logo">🌍</div>
+        <div>
+          <div class="brand-title">
+            Atmosphere
+            <span class="region-badge" id="active-country-badge">🇱 Sri Lanka</span>
+          </div>
+          <div class="status-pill live" id="data-status-badge"> Live Satellite</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="audio-btn">
+          <i class="ph-fill ph-speaker-slash" id="audio-icon"></i>
+          <span id="audio-label">Audio: Off</span>
+        </button>
+
+        <button class="btn" id="refresh-btn">
+          <i class="ph-bold ph-arrows-clockwise"></i> Refresh
+        </button>
+
+        <button class="btn" id="unit-btn">
+          <i class="ph-bold ph-thermometer"></i>
+          <span id="unit-label">°C</span>
+        </button>
+
+        <button class="btn" id="loc-btn">
+          <i class="ph-fill ph-crosshair"></i> GPS
+        </button>
+
+        <select class="sim-select" id="sim-mode">
+          <option value="live">Live Mode</option>
+          <option value="yellow">Sim: Yellow Watch</option>
+          <option value="orange">Sim: Orange Warning</option>
+          <option value="red">Sim: Red Emergency</option>
+        </select>
+
+        <div class="search-wrapper">
+          <div class="search-bar glass">
+            <i class="ph-bold ph-magnifying-glass"></i>
+            <input id="city-input" type="text" placeholder="Search city…" autocomplete="off" />
+          </div>
+          <div class="search-results" id="search-results"></div>
+        </div>
+      </div>
+    </header>
+
+    <div class="top-nav-row">
+      <div class="country-bar" id="country-bar">
+        <button class="country-chip active" data-country="LK">🇱🇰 Sri Lanka</button>
+        <button class="country-chip" data-country="AU">🇦🇺 Australia</button>
+        <button class="country-chip" data-country="US">🇺🇸 USA</button>
+        <button class="country-chip" data-country="GB">🇬🇧 UK</button>
+        <button class="country-chip" data-country="JP">🇯🇵 Japan</button>
+        <button class="country-chip" data-country="GLOBAL">🌍 Worldwide</button>
+      </div>
+
+      <div class="state-pills" id="state-pills"></div>
     </div>
 
-    <div class="app-container">
-        <header>
-            <div class="brand">
-                <div class="brand-logo"><i class="ph-fill ph-planet"></i></div>
-                <div class="brand-title">
-                    Atmosphere 
-                    <span class="region-badge" id="active-country-badge">🇱🇰 Sri Lanka</span>
-                    <span class="status-pill live" id="data-status-badge" title="Real-time API connection status">● LIVE TELEMETRY</span>
-                </div>
-            </div>
-            
-            <div class="search-wrapper">
-                <div class="search-bar glass">
-                    <i class="ph ph-magnifying-glass"></i>
-                    <input type="text" id="city-input" placeholder="Search ANY city or town worldwide..." autocomplete="off" aria-label="Search city worldwide">
-                </div>
-                <div class="search-results" id="search-results"></div>
-            </div>
-
-            <div class="controls">
-                <button class="btn" id="audio-btn" aria-label="Toggle Ambient Weather Audio">
-                    <i class="ph-fill ph-speaker-slash" id="audio-icon"></i>
-                    <span id="audio-label">Audio: Off</span>
-                </button>
-                <select id="sim-mode" class="sim-select" aria-label="Simulation Mode">
-                    <option value="live">📡 Live Satellite</option>
-                    <option value="yellow">🟡 Yellow Watch</option>
-                    <option value="orange">🟠 Orange Warning</option>
-                    <option value="red">🔴 Red Emergency</option>
-                </select>
-                <button class="btn" id="refresh-btn" title="Force Sync Data" aria-label="Refresh Telemetry Data">
-                    <i class="ph-bold ph-arrows-clockwise"></i>
-                </button>
-                <button class="btn" id="loc-btn" title="Use GPS Location" aria-label="Use GPS Location">
-                    <i class="ph-fill ph-navigation-arrow"></i>
-                </button>
-                <button class="btn" id="unit-btn" aria-label="Toggle Celsius or Fahrenheit">
-                    <span id="unit-label">°C</span>
-                </button>
-            </div>
-        </header>
-
-        <div class="top-nav-row">
-            <div class="view-tabs" role="tablist">
-                <button class="view-tab-btn active" data-tab="overview" role="tab"><i class="ph-fill ph-sun-horizon"></i> Weather & Outlook</button>
-                <button class="view-tab-btn" data-tab="rivers" role="tab"><i class="ph-fill ph-waves"></i> RiverNet & Gauges <span class="tab-badge" id="river-count-badge">12</span></button>
-                <button class="view-tab-btn" data-tab="hazards" role="tab"><i class="ph-fill ph-shield-warning"></i> 8-Hazard Matrix</button>
-                <button class="view-tab-btn" data-tab="radar" role="tab"><i class="ph-fill ph-globe-hemisphere-east"></i> Radar, Marine & Quakes</button>
-            </div>
-            <div class="country-bar" id="country-tabs">
-                <button class="country-chip active" data-country="LK">🇱🇰 Sri Lanka</button>
-                <button class="country-chip" data-country="AU">🇦🇺 Australia</button>
-                <button class="country-chip" data-country="US">🇺🇸 USA</button>
-                <button class="country-chip" data-country="GB">🇬🇧 UK</button>
-                <button class="country-chip" data-country="JP">🇯🇵 Japan</button>
-                <button class="country-chip" data-country="GLOBAL">🌍 Worldwide</button>
-            </div>
-        </div>
-
-        <div class="state-pills" id="state-pills"></div>
-
-        <!-- Master Emergency Alert Banner -->
-        <section class="alert-banner level-green glass" id="alert-banner" role="alert" aria-live="assertive">
-            <div class="alert-left">
-                <div class="alert-beacon" id="alert-icon"><i class="ph-fill ph-shield-check"></i></div>
-                <div>
-                    <div class="alert-badge-pill" id="alert-pill">GREEN • NORMAL</div>
-                    <div class="alert-headline" id="alert-title">Conditions Normal Across Monitored Basins</div>
-                    <div class="alert-desc" id="alert-desc">Real-time weather, marine, and river telemetry are within safe operating thresholds.</div>
-                </div>
-            </div>
-            <div class="emergency-hotlines" id="hotlines-container"></div>
-        </section>
-
-        <!-- TAB 1: WEATHER OVERVIEW -->
-        <div class="tab-view active" id="tab-overview">
-            <div class="landing-grid">
-                <section class="hero-card glass">
-                    <div>
-                        <div class="location-badge">
-                            <i class="ph-fill ph-map-pin" style="color: #38bdf8;"></i>
-                            <span id="loc-name">Ratnapura, Sabaragamuwa</span>
-                        </div>
-                        <div id="current-date" class="sub-date">--</div>
-                    </div>
-                    <div class="hero-temp-row">
-                        <div class="temp-huge" id="current-temp">--°</div>
-                        <div class="hero-icon" id="current-icon">⛅</div>
-                    </div>
-                    <div>
-                        <div class="weather-desc" id="current-desc">--</div>
-                        <div class="high-low">
-                            <span><i class="ph-bold ph-arrow-up"></i> <span id="temp-max">--°</span></span>
-                            <span><i class="ph-bold ph-arrow-down"></i> <span id="temp-min">--°</span></span>
-                            <span>Feels Like <span id="feels-like">--°</span></span>
-                            <span><i class="ph-fill ph-gauge"></i> <span id="surface-pressure">---- hPa</span></span>
-                        </div>
-                    </div>
-                    <div class="smart-context-slot" id="smart-context-slot"></div>
-                </section>
-
-                <div class="overview-right-col">
-                    <div class="quick-metrics-grid">
-                        <div class="qm-card glass">
-                            <span class="qm-lbl"><i class="ph-fill ph-cloud-rain" style="color:#38bdf8;"></i> 24h Rain</span>
-                            <span class="qm-val mono" id="qm-rain">-- mm</span>
-                            <span class="qm-sub" id="qm-rain-sub">Safe range</span>
-                        </div>
-                        <div class="qm-card glass">
-                            <span class="qm-lbl"><i class="ph-fill ph-wind" style="color:#a7f3d0;"></i> Peak Gusts</span>
-                            <span class="qm-val mono" id="qm-wind">-- km/h</span>
-                            <span class="qm-sub" id="qm-wind-sub">Calm breeze</span>
-                        </div>
-                        <div class="qm-card glass">
-                            <span class="qm-lbl"><i class="ph-fill ph-sun" style="color:#fde047;"></i> UV Index</span>
-                            <span class="qm-val mono" id="qm-uv">--</span>
-                            <span class="qm-sub" id="qm-uv-sub">Low risk</span>
-                        </div>
-                        <div class="qm-card glass">
-                            <span class="qm-lbl"><i class="ph-fill ph-leaf" style="color:#34d399;"></i> Air Quality</span>
-                            <span class="qm-val mono" id="qm-aqi">--</span>
-                            <span class="qm-sub" id="qm-aqi-sub">Clean air</span>
-                        </div>
-                    </div>
-
-                    <section class="hourly-card glass">
-                        <div class="section-header">
-                            <div class="section-title"><i class="ph-bold ph-clock"></i> 24-Hour Forecast</div>
-                            <span class="region-focus-lbl" id="smart-region-tag">Smart Regional Telemetry Active</span>
-                        </div>
-                        <div class="hourly-scroll" id="hourly-container"></div>
-                    </section>
-                </div>
-            </div>
-
-            <section class="weekly-card glass">
-                <div class="section-header">
-                    <div class="section-title"><i class="ph-bold ph-calendar-blank"></i> 7-Day Forecast & Solar Cycle</div>
-                    <div class="solar-pills" id="solar-pills">
-                        <span><i class="ph-fill ph-sun-horizon" style="color:#fde047;"></i> Sunrise: <strong id="sunrise-time">--:--</strong></span>
-                        <span><i class="ph-fill ph-moon-stars" style="color:#818cf8;"></i> Sunset: <strong id="sunset-time">--:--</strong></span>
-                    </div>
-                </div>
-                <div class="daily-list" id="daily-container"></div>
-            </section>
-        </div>
-
-        <!-- TAB 2: RIVERNET.LK & SATELLITE WATER LEVEL GAUGES -->
-        <div class="tab-view" id="tab-rivers">
-            <div class="rivernet-header-bar glass">
-                <div>
-                    <div class="hub-title">
-                        <i class="ph-fill ph-broadcast" style="color: #38bdf8;"></i>
-                        <span id="river-hub-title">RiverNet.lk & GloFAS Satellite Hydrological Telemetry</span>
-                    </div>
-                    <div class="hub-sub" id="river-hub-sub">
-                        Live sync with Irrigation Dept / RiverNet.lk thresholds for Ratnapura, We Ganga, Kukule Ganga, Kelani, Nilwala & more.
-                    </div>
-                </div>
-                <a href="https://rivernet.lk/ratnapura" target="_blank" rel="noopener" class="rivernet-link-btn" id="rivernet-direct-btn">
-                    <i class="ph-bold ph-arrow-square-out"></i> Open RiverNet.lk Live
-                </a>
-            </div>
-
-            <section class="glass section-pad">
-                <div class="section-header">
-                    <div class="section-title">
-                        <i class="ph-fill ph-waves" style="color: #38bdf8;"></i>
-                        <span id="river-sec-title">Active River & Tributary Gauges</span>
-                    </div>
-                    <div class="filter-pills" id="basin-filters">
-                        <button class="filter-btn active" data-filter="all">All Stations (12)</button>
-                        <button class="filter-btn" data-filter="kalu">Kalu Basin (Ratnapura / We / Kukule)</button>
-                        <button class="filter-btn" data-filter="kelani">Kelani Basin</button>
-                        <button class="filter-btn" data-filter="south">Southern (Nilwala / Gin)</button>
-                        <button class="filter-btn" data-filter="dry">Mahaweli / Central</button>
-                    </div>
-                </div>
-                <div class="rivers-grid" id="rivers-container"></div>
-            </section>
-        </div>
-
-        <!-- TAB 3: 8-VECTOR HAZARD TELEMETRY MATRIX -->
-        <div class="tab-view" id="tab-hazards">
-            <section class="glass section-pad">
-                <div class="section-header">
-                    <div class="section-title">
-                        <i class="ph-fill ph-shield-warning" style="color: #facc15;"></i>
-                        <span>All 8 Real-Time Hazard & Photobiology Vectors</span>
-                    </div>
-                    <span class="region-focus-lbl">UV • Burn Time • Heat • Rain • Wind • AQI • Visibility • CAPE • Soil Saturation</span>
-                </div>
-                <div class="hazard-grid" id="hazard-grid"></div>
-            </section>
-        </div>
-
-        <!-- TAB 4: LIVE INTERACTIVE RADAR, MARINE & USGS SEISMIC FEED -->
-        <div class="tab-view" id="tab-radar">
-            <div class="radar-seismic-grid">
-                <section class="glass section-pad map-panel">
-                    <div class="section-header">
-                        <div class="section-title">
-                            <i class="ph-fill ph-radar" style="color: #38bdf8;"></i>
-                            <span>Live RainViewer Doppler Radar, River Gauges & Seismic Epicenters</span>
-                        </div>
-                        <span class="region-focus-lbl" id="radar-timestamp">Radar: Live Sync</span>
-                    </div>
-                    <div id="radar-map" class="radar-map-box"></div>
-                </section>
-
-                <div class="seismic-marine-col">
-                    <!-- Marine & Coastal Telemetry Card -->
-                    <section class="glass section-pad">
-                        <div class="section-header">
-                            <div class="section-title">
-                                <i class="ph-fill ph-boat" style="color: #38bdf8;"></i>
-                                <span>Marine & Coastal Swell (Open-Meteo Marine)</span>
-                            </div>
-                        </div>
-                        <div class="marine-metrics" id="marine-container">
-                            <div class="marine-box">
-                                <span class="qm-lbl">Wave Height</span>
-                                <span class="qm-val mono" id="marine-wave">-- m</span>
-                            </div>
-                            <div class="marine-box">
-                                <span class="qm-lbl">Swell Height</span>
-                                <span class="qm-val mono" id="marine-swell">-- m</span>
-                            </div>
-                            <div class="marine-box">
-                                <span class="qm-lbl">Wave Period</span>
-                                <span class="qm-val mono" id="marine-period">-- s</span>
-                            </div>
-                        </div>
-                        <div class="marine-advisory" id="marine-advisory">Syncing coastal wave telemetry...</div>
-                    </section>
-
-                    <!-- USGS Real-Time Earthquake & Tsunami Telemetry -->
-                    <section class="glass section-pad seismic-panel">
-                        <div class="section-header">
-                            <div class="section-title">
-                                <i class="ph-fill ph-activity" style="color: #f97316;"></i>
-                                <span>USGS Live Earthquakes (M4.0+ Feed)</span>
-                            </div>
-                            <a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener" class="ext-mini-link">USGS Live <i class="ph-bold ph-arrow-square-out"></i></a>
-                        </div>
-                        <div class="quake-list" id="quake-container"></div>
-                    </section>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Mobile Bottom Navigation -->
-    <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
-        <button class="mob-nav-item active" data-mob-tab="overview"><i class="ph-fill ph-sun-horizon"></i><span>Weather</span></button>
-        <button class="mob-nav-item" data-mob-tab="rivers"><i class="ph-fill ph-waves"></i><span>Rivers</span></button>
-        <button class="mob-nav-item" data-mob-tab="hazards"><i class="ph-fill ph-shield-warning"></i><span>8 Hazards</span></button>
-        <button class="mob-nav-item" data-mob-tab="radar"><i class="ph-fill ph-globe-hemisphere-east"></i><span>Radar/Quake</span></button>
+    <nav class="view-tabs">
+      <button class="view-tab-btn active" data-tab="overview">
+        <i class="ph-fill ph-cloud-sun"></i> Weather & Outlook
+      </button>
+      <button class="view-tab-btn" data-tab="rivers">
+        <i class="ph-fill ph-waves"></i> RiverNet & Gauges
+        <span class="tab-badge" id="river-count-badge">39</span>
+      </button>
+      <button class="view-tab-btn" data-tab="hazards">
+        <i class="ph-fill ph-warning"></i> 8-Hazard Matrix
+      </button>
+      <button class="view-tab-btn" data-tab="radar">
+        <i class="ph-fill ph-radar"></i> Radar, Marine & Quakes
+      </button>
     </nav>
 
-    <!-- Application Scripts -->
-    <script src="data.js"></script>
-    <script src="app.js"></script>
+    <section class="alert-banner glass level-green" id="alert-banner">
+      <div class="alert-left">
+        <div class="alert-beacon" id="alert-icon">
+          <i class="ph-fill ph-shield-check"></i>
+        </div>
+        <div>
+          <span class="alert-badge-pill" id="alert-pill">GREEN • NORMAL</span>
+          <div class="alert-headline" id="alert-title">Conditions Normal Across Monitored Basins</div>
+          <div class="alert-desc" id="alert-desc">Real-time weather, marine, and river telemetry are within safe operating thresholds.</div>
+        </div>
+      </div>
+      <div class="emergency-hotlines" id="hotlines-container"></div>
+    </section>
+
+    <main>
+      <section class="tab-view active" id="tab-overview">
+        <div class="landing-grid">
+          <article class="hero-card glass section-pad">
+            <div>
+              <div class="location-badge">
+                <i class="ph-fill ph-map-pin"></i>
+                <span id="loc-name">Ratnapura, Sabaragamuwa</span>
+              </div>
+              <div class="sub-date" id="current-date">—</div>
+            </div>
+
+            <div class="hero-temp-row">
+              <div class="temp-huge" id="current-temp">--°</div>
+              <div class="hero-icon" id="current-icon">⛅</div>
+            </div>
+
+            <div>
+              <div class="weather-desc" id="current-desc">Tropical Monsoon Zone</div>
+              <div class="high-low">
+                <span>H <span id="temp-max">--°</span></span>
+                <span>L <span id="temp-min">--°</span></span>
+                <span>Feels <span id="feels-like">--°</span></span>
+                <span><span id="surface-pressure">--</span> hPa</span>
+              </div>
+              <div class="solar-pills" style="margin-top:10px;">
+                <span><i class="ph-fill ph-sunrise"></i> Sunrise <span id="sunrise-time">--:--</span></span>
+                <span><i class="ph-fill ph-sunset"></i> Sunset <span id="sunset-time">--:--</span></span>
+              </div>
+            </div>
+
+            <div class="smart-context-slot" id="smart-context-slot"></div>
+          </article>
+
+          <div class="overview-right-col">
+            <div class="quick-metrics-grid">
+              <div class="qm-card">
+                <div class="qm-lbl"><i class="ph-fill ph-cloud-rain"></i> 24h Rain</div>
+                <div class="qm-val" id="qm-rain">-- mm</div>
+                <div class="qm-sub" id="qm-rain-sub">Safe range</div>
+              </div>
+              <div class="qm-card">
+                <div class="qm-lbl"><i class="ph-fill ph-wind"></i> Peak Gusts</div>
+                <div class="qm-val" id="qm-wind">-- km/h</div>
+                <div class="qm-sub" id="qm-wind-sub">Calm breeze</div>
+              </div>
+              <div class="qm-card">
+                <div class="qm-lbl"><i class="ph-fill ph-sun"></i> UV Index</div>
+                <div class="qm-val" id="qm-uv">--</div>
+                <div class="qm-sub" id="qm-uv-sub">Low risk</div>
+              </div>
+              <div class="qm-card">
+                <div class="qm-lbl"><i class="ph-fill ph-leaf"></i> Air Quality</div>
+                <div class="qm-val" id="qm-aqi">--</div>
+                <div class="qm-sub" id="qm-aqi-sub">Clean air</div>
+              </div>
+            </div>
+
+            <article class="hourly-card glass section-pad">
+              <div class="section-header">
+                <div class="section-title"><i class="ph-fill ph-clock"></i> 24-Hour Forecast</div>
+                <div class="region-focus-lbl" id="smart-region-tag">Smart Regional Telemetry Active</div>
+              </div>
+              <div class="hourly-scroll" id="hourly-container"></div>
+            </article>
+
+            <article class="weekly-card glass section-pad">
+              <div class="section-header">
+                <div class="section-title"><i class="ph-fill ph-calendar-blank"></i> 7-Day Forecast & Solar Cycle</div>
+              </div>
+              <div class="daily-list" id="daily-container"></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-view" id="tab-rivers">
+        <div class="rivernet-header-bar">
+          <div>
+            <div class="hub-title" id="river-hub-title">
+              RiverNet.lk & GloFAS Satellite Hydrological Telemetry
+            </div>
+            <div class="hub-sub">
+              Live sync with Irrigation Dept / RiverNet.lk thresholds for Ratnapura, We Ganga, Kukule Ganga, Kelani, Nilwala & more.
+            </div>
+          </div>
+          <a class="rivernet-link-btn" id="rivernet-direct-btn" href="https://rivernet.lk/ratnapura" target="_blank" rel="noopener">
+            <i class="ph-bold ph-arrow-square-out"></i> Open RiverNet.lk Live
+          </a>
+        </div>
+
+        <div class="section-header" style="margin-top:14px;">
+          <div class="section-title"><i class="ph-fill ph-funnel"></i> Basin & Source Filters</div>
+          <div class="filter-pills" id="basin-filters"></div>
+          <select class="sim-select source-select" id="river-source-filter">
+            <option value="all">All Sources</option>
+            <option value="official">Official Only</option>
+            <option value="provisional">Provisional Only</option>
+          </select>
+        </div>
+
+        <div id="rivers-container"></div>
+      </section>
+
+      <section class="tab-view" id="tab-hazards">
+        <div class="section-header">
+          <div class="section-title"><i class="ph-fill ph-warning-octagon"></i> All 8 Real-Time Hazard & Photobiology Vectors</div>
+          <div class="region-focus-lbl">UV • Burn Time • Heat • Rain • Wind • AQI • Visibility • CAPE • Soil Saturation</div>
+        </div>
+        <div class="hazard-grid" id="hazard-grid"></div>
+      </section>
+
+      <section class="tab-view" id="tab-radar">
+        <div class="radar-seismic-grid">
+          <article class="glass section-pad">
+            <div class="section-header">
+              <div class="section-title"><i class="ph-fill ph-radar"></i> Live RainViewer Doppler Radar, River Gauges & Seismic Epicenters</div>
+              <div class="region-focus-lbl" id="radar-timestamp">Radar: Live Sync</div>
+            </div>
+            <div class="radar-map-box">
+              <div id="radar-map"></div>
+            </div>
+          </article>
+
+          <div class="seismic-marine-col">
+            <article class="glass section-pad">
+              <div class="section-title" style="margin-bottom:10px;"><i class="ph-fill ph-waves"></i> Marine & Coastal Swell</div>
+              <div class="marine-metrics">
+                <div class="marine-box">
+                  <div class="qm-lbl">Wave Height</div>
+                  <div class="qm-val" id="marine-wave">-- m</div>
+                </div>
+                <div class="marine-box">
+                  <div class="qm-lbl">Swell Height</div>
+                  <div class="qm-val" id="marine-swell">-- m</div>
+                </div>
+                <div class="marine-box">
+                  <div class="qm-lbl">Wave Period</div>
+                  <div class="qm-val" id="marine-period">-- s</div>
+                </div>
+              </div>
+              <div class="marine-advisory" id="marine-advisory">Syncing coastal wave telemetry…</div>
+            </article>
+
+            <article class="glass section-pad">
+              <div class="section-header">
+                <div class="section-title"><i class="ph-fill ph-activity"></i> USGS Live Earthquakes (M4.0+)</div>
+                <a class="ext-mini-link" href="https://earthquake.usgs.gov/" target="_blank" rel="noopener">
+                  USGS Live <i class="ph-bold ph-arrow-square-out"></i>
+                </a>
+              </div>
+              <div class="quake-list" id="quake-container"></div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <nav class="mobile-bottom-nav">
+    <button class="mob-nav-item active" data-mob-tab="overview">
+      <i class="ph-fill ph-cloud-sun"></i> Weather
+    </button>
+    <button class="mob-nav-item" data-mob-tab="rivers">
+      <i class="ph-fill ph-waves"></i> Rivers
+    </button>
+    <button class="mob-nav-item" data-mob-tab="hazards">
+      <i class="ph-fill ph-warning"></i> 8 Hazards
+    </button>
+    <button class="mob-nav-item" data-mob-tab="radar">
+      <i class="ph-fill ph-radar"></i> Radar/Quake
+    </button>
+  </nav>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="./data.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
