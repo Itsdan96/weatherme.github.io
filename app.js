@@ -1704,3 +1704,238 @@ setInterval(() => {
     fetchAllData(state.lat, state.lon, state.city, state.countryCode);
   }
 }, 10 * 60 * 1000);
+
+/* ==========================================================================
+   AUTO LOCATION + SMART GPS CACHE + REAL-TIME STARTUP
+   Replace the old bottom initialization with this whole block.
+   ========================================================================== */
+
+const GEO_CACHE_KEY = "atmosphere.geoCache.v1";
+const GEO_CACHE_MAX_MS = 30 * 60 * 1000;       // 30 minutes saved location usable
+const GEO_FRESH_SKIP_MS = 5 * 60 * 1000;       // if newer than 5 min, don't force new GPS
+
+function updateStatusBadge(type, text) {
+  const badge = document.getElementById("data-status-badge");
+  if (!badge) return;
+  badge.className = `status-pill ${type}`;
+  badge.textContent = text;
+}
+
+function setActiveCountryChip(countryCode) {
+  document.querySelectorAll(".country-chip").forEach(chip => {
+    chip.classList.toggle("active", chip.dataset.country === countryCode);
+  });
+}
+
+function loadGeoCache() {
+  try {
+    const raw = localStorage.getItem(GEO_CACHE_KEY);
+    if (!raw) return null;
+
+    const obj = JSON.parse(raw);
+    if (
+      !obj ||
+      !Number.isFinite(obj.lat) ||
+      !Number.isFinite(obj.lon) ||
+      !obj.city ||
+      !obj.countryCode ||
+      !Number.isFinite(obj.ts) ||
+      Date.now() - obj.ts > GEO_CACHE_MAX_MS
+    ) {
+      return null;
+    }
+
+    if (!PROFILES[obj.countryCode]) {
+      obj.countryCode = "GLOBAL";
+    }
+
+    return obj;
+  } catch {
+    return null;
+  }
+}
+
+function saveGeoCache(data) {
+  try {
+    if (
+      !data ||
+      !Number.isFinite(data.lat) ||
+      !Number.isFinite(data.lon) ||
+      !data.city ||
+      !data.countryCode
+    ) return;
+
+    localStorage.setItem(
+      GEO_CACHE_KEY,
+      JSON.stringify({
+        lat: data.lat,
+        lon: data.lon,
+        city: data.city,
+        countryCode: data.countryCode,
+        stateCode: data.stateCode || "GPS",
+        ts: Date.now()
+      })
+    );
+  } catch {}
+}
+
+function guessCountryFromCoords(lat, lon) {
+  // Rough fallback if reverse geocode API fails.
+  if (lat >= 5.8 && lat <= 10.0 && lon >= 79.5 && lon <= 82.0) return "LK";
+  if (lat >= -45 && lat <= -10 && lon >= 110 && lon <= 155) return "AU";
+  if (lat >= 24 && lat <= 50 && lon >= -125 && lon <= -66) return "US";
+  if (lat >= 50 && lat <= 59 && lon >= -8 && lon <= 2) return "GB";
+  if (lat >= 30 && lat <= 46 && lon >= 128 && lon <= 146) return "JP";
+  return "GLOBAL";
+}
+
+function findNearestState(profile, lat, lon) {
+  if (!profile || !Array.isArray(profile.states) || profile.states.length === 0) return null;
+
+  let best = null;
+  let bestDist = Infinity;
+
+  profile.states.forEach(st => {
+    const d = calcDistanceKm(lat, lon, st.lat, st.lon);
+    if (d < bestDist) {
+      bestDist = d;
+      best = st;
+    }
+  });
+
+  // Only auto-select a state pill if user is reasonably near one.
+  return bestDist <= 150 ? best : null;
+}
+
+async function resolveLocationName(lat, lon) {
+  const guessedCountry = guessCountryFromCoords(lat, lon);
+
+  const geo = await fetchWithTimeout(
+    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
+    3500
+  );
+
+  if (!geo) {
+    return {
+      city: "My GPS Location",
+      countryCode: guessedCountry
+    };
+  }
+
+  const city = geo.city || geo.locality || geo.principalSubdivision || "My GPS Location";
+  const region = geo.principalSubdivision || geo.countryName || "";
+  const countryCode = geo.countryCode || guessedCountry;
+
+  const displayName = region
+    ? `${city} (${region})`
+    : `${city} (${geo.countryName || countryCode})`;
+
+  return {
+    city: displayName,
+    countryCode
+  };
+}
+
+function autoDetectLocation(force = false) {
+  if (!("geolocation" in navigator)) {
+    updateStatusBadge("offline", "⚠ GPS unsupported — using default telemetry");
+    return;
+  }
+
+  const cached = loadGeoCache();
+
+  // If we already have a very recent GPS cache, don't disturb the user again.
+  if (!force && cached && Date.now() - cached.ts < GEO_FRESH_SKIP_MS) {
+    updateStatusBadge("live", "● RECENT GPS CACHE ACTIVE");
+    return;
+  }
+
+  updateStatusBadge("live", "↻ REQUESTING GPS LOCATION...");
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      try {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+
+        updateStatusBadge("live", "↻ RESOLVING GPS LOCATION...");
+
+        const resolved = await resolveLocationName(lat, lon);
+        const countryCode = PROFILES[resolved.countryCode] ? resolved.countryCode : "GLOBAL";
+        const profile = PROFILES[countryCode] || PROFILES.GLOBAL;
+        const nearest = findNearestState(profile, lat, lon);
+        const stateCode = nearest ? nearest.code : "GPS";
+        const city = resolved.city || (nearest ? nearest.name : "My GPS Location");
+
+        saveGeoCache({
+          lat,
+          lon,
+          city,
+          countryCode,
+          stateCode
+        });
+
+        setActiveCountryChip(countryCode);
+        state.stateCode = stateCode;
+
+        await fetchAllData(lat, lon, city, countryCode);
+
+        updateStatusBadge("live", "● LIVE GPS TELEMETRY");
+      } catch (err) {
+        console.warn("Auto location resolve failed:", err);
+        updateStatusBadge("offline", "⚠ GPS lookup failed — using default telemetry");
+      }
+    },
+    (err) => {
+      let msg = "⚠ GPS unavailable — using default telemetry";
+
+      if (err.code === 1) {
+        msg = "⚠ Location permission denied — using default telemetry";
+      } else if (err.code === 2) {
+        msg = "⚠ Position unavailable — using default telemetry";
+      } else if (err.code === 3) {
+        msg = "⚠ GPS timeout — using default telemetry";
+      }
+
+      const cached = loadGeoCache();
+      if (cached) {
+        msg = "⚠ GPS refresh failed — using saved location";
+      }
+
+      updateStatusBadge("offline", msg);
+    },
+    {
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 300000
+    }
+  );
+}
+
+function startupTelemetry() {
+  animateCanvas();
+
+  const cached = loadGeoCache();
+
+  if (cached) {
+    // Instantly show last known good location while GPS refreshes in background.
+    setActiveCountryChip(cached.countryCode);
+    state.stateCode = cached.stateCode || "GPS";
+    fetchAllData(cached.lat, cached.lon, cached.city, cached.countryCode);
+  } else {
+    // First-time fallback so UI never hangs.
+    fetchAllData(state.lat, state.lon, state.city, "LK");
+  }
+
+  // Automatically ask/use GPS location.
+  autoDetectLocation(false);
+
+  // Smart periodic refresh every 10 minutes when tab is visible.
+  setInterval(() => {
+    if (!document.hidden) {
+      fetchAllData(state.lat, state.lon, state.city, state.countryCode);
+    }
+  }, 10 * 60 * 1000);
+}
+
+startupTelemetry();
