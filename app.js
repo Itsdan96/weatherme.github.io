@@ -1,11 +1,6 @@
 /* ==========================================================================
-   ATMOSPHERE GLOBAL PRO — FULL SMART APP ENGINE
-   - Smooth situation-based canvas FX
-   - Auto GPS location + cache
-   - RiverNet 39-station smart registry
-   - Official/Provisional source filter
-   - Safe master alert logic
-   - Non-blocking realtime telemetry
+   ATMOSPHERE GLOBAL PRO — SMART NEARBY RIVER + AUTO LOCATION + SMOOTH FX
+   Full replacement app.js
    ========================================================================== */
 
 (() => {
@@ -15,7 +10,7 @@
   window.__AtmosphereAppLoaded = true;
 
   /* -----------------------------
-     Tiny DOM helpers
+     Helpers
   ----------------------------- */
   const byId = (id) => document.getElementById(id);
   const qs = (sel, root = document) => root.querySelector(sel);
@@ -38,12 +33,12 @@
   const lerp = (a, b, t) => a + (b - a) * t;
 
   /* -----------------------------
-     Fallback profiles if data.js fails
+     Fallback profiles
   ----------------------------- */
   const DEFAULT_PROFILES = {
     LK: {
       name: "Sri Lanka",
-      flag: "🇱🇰",
+      flag: "🇱",
       agency: "Irrigation Dept / RiverNet.lk / DMC Live Sensors",
       sunPriority: "conditional",
       primaryFocus: "Monsoon Flood & NBRO Landslide Watch",
@@ -53,10 +48,7 @@
         { num: "011-2686686", lbl: "Met Dept" }
       ],
       states: [
-        { code: "SG", name: "Ratnapura (Kalu / We Ganga)", lat: 6.6828, lon: 80.3992 },
-        { code: "WP", name: "Colombo / Nugegoda (Kelani Basin)", lat: 6.8729, lon: 79.8899 },
-        { code: "CP", name: "Kandy (Mahaweli Basin)", lat: 7.2906, lon: 80.6337 },
-        { code: "SP", name: "Galle / Matara (Nilwala & Gin)", lat: 6.0535, lon: 80.2210 }
+        { code: "SG", name: "Ratnapura (Kalu / We Ganga)", lat: 6.6828, lon: 80.3992 }
       ],
       basins: {},
       rivers: [
@@ -72,9 +64,9 @@
           lon: 80.3992,
           unit: "m",
           normalLvl: 1.95,
-          alertLvl: 5.20,
-          minorLvl: 7.50,
-          majorLvl: 9.50,
+          alertLvl: 5.2,
+          minorLvl: 7.5,
+          majorLvl: 9.5,
           maxScale: 11.5,
           thresholdSource: "official",
           official: true
@@ -92,8 +84,7 @@
         { num: "911", lbl: "Global Rescue" }
       ],
       states: [
-        { code: "DXB", name: "Dubai (UAE)", lat: 25.2048, lon: 55.2708 },
-        { code: "SIN", name: "Singapore", lat: 1.3521, lon: 103.8198 }
+        { code: "DXB", name: "Dubai (UAE)", lat: 25.2048, lon: 55.2708 }
       ],
       basins: {},
       rivers: [
@@ -111,7 +102,7 @@
           alertLvl: 3.8,
           minorLvl: 4.8,
           majorLvl: 6.2,
-          maxScale: 8.0,
+          maxScale: 8,
           thresholdSource: "official",
           official: true
         }
@@ -144,7 +135,7 @@
     typeof WMO_CODES !== "undefined" && WMO_CODES ? WMO_CODES : DEFAULT_WMO;
 
   /* -----------------------------
-     App state
+     State
   ----------------------------- */
   const state = {
     activeTab: "overview",
@@ -156,6 +147,7 @@
     unit: "C",
     simMode: "live",
     alertLevel: "green",
+    locationSource: "default",
     basinFilter: "all",
     riverStatusFilter: "all",
     riverSourceFilter: "all",
@@ -182,7 +174,7 @@
   };
 
   /* -----------------------------
-     Loader
+     Loader / status
   ----------------------------- */
   function showLoader(visible) {
     const loader = byId("loader");
@@ -209,8 +201,7 @@
   }
 
   /* -----------------------------
-     Smooth FX / Canvas Engine
-     Single RAF loop, lerped values, no duplicate animation frames.
+     Smooth FX engine
   ----------------------------- */
   const FX = {
     canvas: byId("weather-canvas"),
@@ -386,7 +377,6 @@
 
       ctx.clearRect(0, 0, w, h);
 
-      // Fog layer
       const fogCount = Math.round(this.pool.fog.length * this.state.fog);
       for (let i = 0; i < fogCount; i++) {
         const p = this.pool.fog[i];
@@ -402,7 +392,6 @@
         ctx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
       }
 
-      // Rain layer
       const rainCount = Math.round(this.pool.rain.length * this.state.rain);
       if (rainCount > 0) {
         const slant = 1.5 + this.state.wind * 14;
@@ -429,7 +418,6 @@
         ctx.stroke();
       }
 
-      // Sun motes / stars
       const moteStrength = Math.max(this.state.sun, this.state.star);
       const moteCount = Math.round(this.pool.motes.length * moteStrength);
       for (let i = 0; i < moteCount; i++) {
@@ -459,7 +447,6 @@
         ctx.fill();
       }
 
-      // Lightning flash
       if (this.state.flash > 0.01) {
         ctx.fillStyle = `rgba(224, 242, 254, ${Math.min(0.52, this.state.flash * 0.52)})`;
         ctx.fillRect(0, 0, w, h);
@@ -468,7 +455,7 @@
   };
 
   /* -----------------------------
-     Procedural Web Audio Synthesizer
+     Sound engine
   ----------------------------- */
   const SoundEngine = {
     ctx: null,
@@ -591,7 +578,7 @@
   };
 
   /* -----------------------------
-     Network helpers
+     Network / geo helpers
   ----------------------------- */
   async function fetchWithTimeout(url, ms = 4500) {
     const ctrl = new AbortController();
@@ -617,11 +604,39 @@
       Math.cos((lat1 * Math.PI) / 180) *
         Math.cos((lat2 * Math.PI) / 180) *
         Math.sin(dLon / 2) ** 2;
-    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
+  }
+
+  function guessCountryFromCoords(lat, lon) {
+    if (lat >= 5.8 && lat <= 10.0 && lon >= 79.5 && lon <= 82.0) return "LK";
+    if (lat >= -45 && lat <= -10 && lon >= 110 && lon <= 155) return "AU";
+    if (lat >= 24 && lat <= 50 && lon >= -125 && lon <= -66) return "US";
+    if (lat >= 50 && lat <= 59 && lon >= -8 && lon <= 2) return "GB";
+    if (lat >= 30 && lat <= 46 && lon >= 128 && lon <= 146) return "JP";
+    return "GLOBAL";
+  }
+
+  function getProfileForCountry(code) {
+    const upper = String(code || "").toUpperCase();
+    return PROFILES[upper] || PROFILES[guessCountryFromCoords(state.lat, state.lon)] || PROFILES.GLOBAL;
+  }
+
+  function nearestGaugeForCoords(lat, lon, countryCode) {
+    const profile = PROFILES[String(countryCode || "").toUpperCase()] || getProfileForCountry(countryCode);
+    const rivers = profile.rivers || [];
+    let best = null;
+
+    rivers.forEach((r) => {
+      if (!Number.isFinite(r.lat) || !Number.isFinite(r.lon)) return;
+      const d = calcDistanceKm(lat, lon, r.lat, r.lon);
+      if (!best || d < best.km) best = { id: r.id, name: r.name, km: d };
+    });
+
+    return best;
   }
 
   /* -----------------------------
-     RiverNet 39-station smart registry
+     River registry expansion
   ----------------------------- */
   function ensureRiverRegistry() {
     const lk = PROFILES.LK;
@@ -654,7 +669,9 @@
       panadugama: "nilwala",
       baddegama: "gin",
       peradeniya: "mahaweli",
-      dunamale: "attenagalu"
+      dunamale: "attenagalu",
+      putupaula: "kalu",
+      puttupaula: "kalu"
     };
 
     lk.rivers.forEach((r) => {
@@ -709,7 +726,7 @@
   }
 
   /* -----------------------------
-     Live Sri Lanka gauge sync attempt
+     Live gauge sync
   ----------------------------- */
   async function syncRealSriLankaRiverGauges() {
     const data = await fetchWithTimeout("https://sl-water-levels.vercel.app/api/levels", 4000);
@@ -741,7 +758,7 @@
   }
 
   /* -----------------------------
-     Instant fallback weather
+     Fallback weather
   ----------------------------- */
   function buildFallbackWeather() {
     const now = new Date();
@@ -820,7 +837,7 @@
   }
 
   /* -----------------------------
-     Render scheduler / fetch lock
+     Render scheduler
   ----------------------------- */
   let renderScheduled = false;
   function scheduleRender() {
@@ -832,6 +849,9 @@
     });
   }
 
+  /* -----------------------------
+     Fetch master
+  ----------------------------- */
   async function fetchAllData(lat, lon, cityName, forcedCountry = null) {
     const myToken = ++state.fetchToken;
 
@@ -900,7 +920,7 @@
   }
 
   /* -----------------------------
-     WMO / temp helpers
+     WMO / temp / theme
   ----------------------------- */
   function getWMO(code, isDay = 1) {
     const item = WMO_MAP[code] || { desc: "Partly Cloudy", iconDay: "⛅", iconNight: "☁️", anim: "clouds" };
@@ -1161,6 +1181,11 @@
     return `<span style="color:#94a3b8;">● Pending official gauge sync</span>`;
   }
 
+  function distanceBadge(km) {
+    if (km == null || !Number.isFinite(km)) return "";
+    return `<span class="distance-badge"><i class="ph-fill ph-navigation-arrow"></i> ${km.toFixed(1)} km</span>`;
+  }
+
   function ensureRiverSourceControl() {
     let sel = byId("river-source-filter");
     if (sel) return sel;
@@ -1293,7 +1318,7 @@
         <div class="river-content-top">
           <div class="river-header">
             <div>
-              <div class="river-name">${esc(r.name)}</div>
+              <div class="river-name">${esc(r.name)} ${distanceBadge(r.distanceKm)}</div>
               <div class="river-station"><i class="ph-fill ph-map-pin"></i> ${esc(r.station)}</div>
             </div>
             <div class="sev-stack">
@@ -1349,6 +1374,7 @@
           <div class="river-row-sub">
             ${esc(r.station)} • ${esc(r.basinName || r.basinGroup)}
           </div>
+          ${r.distanceKm != null ? `<div class="river-row-distance"><i class="ph-fill ph-navigation-arrow"></i> ${r.distanceKm.toFixed(1)} km from selected location</div>` : ""}
         </div>
 
         <div class="river-row-meter">
@@ -1419,6 +1445,7 @@
           Level: <strong>${r.level == null ? "--" : r.level.toFixed(2)} ${esc(r.unit || "m")}</strong><br>
           Status: <strong>${esc(r.status.label)}</strong><br>
           Source: <strong>${esc(r.source)}</strong><br>
+          Distance: <strong>${r.distanceKm == null ? "--" : r.distanceKm.toFixed(1)} km</strong><br>
           Threshold: <strong>${r.thresholdSource === "provisional" ? "Provisional" : "Official"}</strong>
         </div>
       `;
@@ -1434,10 +1461,21 @@
       bounds.push([r.lat, r.lon]);
     });
 
+    if (Number.isFinite(state.lat) && Number.isFinite(state.lon)) {
+      L.circleMarker([state.lat, state.lon], {
+        radius: 8,
+        color: "#38bdf8",
+        fillColor: "#38bdf8",
+        fillOpacity: 0.95,
+        weight: 2
+      }).bindPopup(`<strong>${esc(state.city)}</strong><br>Selected / searched location`).addTo(state.riverMarkerGroup);
+      bounds.push([state.lat, state.lon]);
+    }
+
     if (bounds.length > 1) {
-      state.riverMap.fitBounds(bounds, { padding: [35, 35], maxZoom: 10 });
+      state.riverMap.fitBounds(bounds, { padding: [35, 35], maxZoom: 11 });
     } else if (bounds.length === 1) {
-      state.riverMap.setView(bounds[0], 9);
+      state.riverMap.setView(bounds[0], 10);
     }
   }
 
@@ -1481,13 +1519,18 @@
     const enriched = rivers.map((river) => {
       const resolved = resolveRiverLevel(river, rain24h);
       const status = getRiverStatus(river, resolved.level);
+      const distanceKm =
+        Number.isFinite(state.lat) && Number.isFinite(state.lon) && Number.isFinite(river.lat) && Number.isFinite(river.lon)
+          ? calcDistanceKm(state.lat, state.lon, river.lat, river.lon)
+          : null;
 
       return {
         ...river,
         basinName: getBasinLabel(profile, river.basinGroup),
         level: resolved.level,
         source: resolved.source,
-        status
+        status,
+        distanceKm
       };
     });
 
@@ -1512,6 +1555,12 @@
       (r) => basinMatchesFilter(r, state.basinFilter) && matchesRiverSourceFilter(r, state.riverSourceFilter)
     );
 
+    const nearby = [...pool]
+      .sort((a, b) => (a.distanceKm ?? 99999) - (b.distanceKm ?? 99999))
+      .slice(0, 6);
+
+    const nearbyIds = new Set(nearby.map((r) => r.id));
+
     const counts = {
       all: pool.length,
       attention: pool.filter((r) => r.status.rank >= 1).length,
@@ -1527,23 +1576,47 @@
     const filtered = pool.filter((r) => matchesRiverStatusFilter(r, state.riverStatusFilter));
 
     const attention = filtered
-      .filter((r) => r.status.rank >= 1)
+      .filter((r) => r.status.rank >= 1 && !nearbyIds.has(r.id))
       .sort((a, b) => {
         const rankDiff = b.status.rank - a.status.rank;
         if (rankDiff !== 0) return rankDiff;
-
         const aRatio = a.level != null && Number.isFinite(a.alertLvl) ? a.level / Math.max(a.alertLvl, 0.1) : 0;
         const bRatio = b.level != null && Number.isFinite(b.alertLvl) ? b.level / Math.max(b.alertLvl, 0.1) : 0;
         return bRatio - aRatio;
       });
 
     const normal = filtered
-      .filter((r) => r.status.key === "normal")
-      .sort((a, b) => (b.level || 0) - (a.level || 0));
+      .filter((r) => r.status.key === "normal" && !nearbyIds.has(r.id))
+      .sort((a, b) => {
+        const ad = a.distanceKm ?? 99999;
+        const bd = b.distanceKm ?? 99999;
+        if (ad !== bd) return ad - bd;
+        return (b.level || 0) - (a.level || 0);
+      });
 
     const pending = filtered
-      .filter((r) => r.status.key === "pending")
-      .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+      .filter((r) => r.status.key === "pending" && !nearbyIds.has(r.id))
+      .sort((a, b) => {
+        const ad = a.distanceKm ?? 99999;
+        const bd = b.distanceKm ?? 99999;
+        if (ad !== bd) return ad - bd;
+        return String(a.name || "").localeCompare(String(b.name || ""));
+      });
+
+    const nearbyHtml = nearby.length
+      ? `
+        <section class="river-section">
+          <div class="section-header">
+            <div class="section-title">📍 Near You / Nearest Gauges</div>
+            <span class="region-focus-lbl">${esc(state.city)}</span>
+          </div>
+          <div class="nearby-note">Closest official/provisional gauges to your searched or GPS location.</div>
+          <div class="rivers-grid" style="margin-top:10px;">
+            ${nearby.map(riverCardHTML).join("")}
+          </div>
+        </section>
+      `
+      : "";
 
     container.innerHTML = `
       ${renderRiverSummaryBar(counts)}
@@ -1555,6 +1628,8 @@
         </div>
       ` : ""}
 
+      ${nearbyHtml}
+
       <section class="river-section">
         <div class="section-header">
           <div class="section-title">⚠ Needs Attention / Flood Status</div>
@@ -1563,7 +1638,7 @@
 
         ${attention.length > 0
           ? `<div class="rivers-grid">${attention.map(riverCardHTML).join("")}</div>`
-          : `<div class="river-empty glass">No station is currently above Alert level in this filter.</div>`
+          : `<div class="river-empty glass">No additional station is currently above Alert level outside the nearby panel.</div>`
         }
       </section>
 
@@ -1605,7 +1680,7 @@
     `;
 
     if (state.activeTab === "rivers") {
-      setTimeout(() => initOrUpdateRiverMap(filtered), 80);
+      setTimeout(() => initOrUpdateRiverMap(nearby.length ? nearby : filtered), 80);
     }
 
     return worst;
@@ -1900,7 +1975,7 @@
   }
 
   /* -----------------------------
-     Main render loop
+     Main render
   ----------------------------- */
   function renderEverything() {
     const data = state.rawWeather;
@@ -2205,7 +2280,7 @@
   /* -----------------------------
      Geo cache + auto location
   ----------------------------- */
-  const GEO_CACHE_KEY = "atmosphere.geoCache.v3";
+  const GEO_CACHE_KEY = "atmosphere.geoCache.v4";
   const GEO_CACHE_MAX_MS = 30 * 60 * 1000;
   const GEO_FRESH_SKIP_MS = 5 * 60 * 1000;
 
@@ -2247,19 +2322,11 @@
           city: data.city,
           countryCode: data.countryCode,
           stateCode: data.stateCode || "GPS",
+          source: data.source || "gps",
           ts: Date.now()
         })
       );
     } catch {}
-  }
-
-  function guessCountryFromCoords(lat, lon) {
-    if (lat >= 5.8 && lat <= 10.0 && lon >= 79.5 && lon <= 82.0) return "LK";
-    if (lat >= -45 && lat <= -10 && lon >= 110 && lon <= 155) return "AU";
-    if (lat >= 24 && lat <= 50 && lon >= -125 && lon <= -66) return "US";
-    if (lat >= 50 && lat <= 59 && lon >= -8 && lon <= 2) return "GB";
-    if (lat >= 30 && lat <= 46 && lon >= 128 && lon <= 146) return "JP";
-    return "GLOBAL";
   }
 
   function findNearestState(profile, lat, lon) {
@@ -2342,8 +2409,9 @@
           const stateCode = nearest ? nearest.code : "GPS";
           const city = resolved.city || (nearest ? nearest.name : "My GPS Location");
 
-          saveGeoCache({ lat, lon, city, countryCode, stateCode });
+          saveGeoCache({ lat, lon, city, countryCode, stateCode, source: "gps" });
 
+          state.locationSource = "gps";
           setActiveCountryChip(countryCode);
           state.stateCode = stateCode;
 
@@ -2376,9 +2444,209 @@
   }
 
   /* -----------------------------
+     Multi-provider geocoding
+  ----------------------------- */
+  async function geocodeOpenMeteo(q) {
+    const data = await fetchWithTimeout(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`,
+      3500
+    );
+
+    return ((data && data.results) || []).map((r) => ({
+      source: "open-meteo",
+      name: r.name || "Place",
+      subtitle: [r.admin1, r.country].filter(Boolean).join(", "),
+      lat: r.latitude,
+      lon: r.longitude,
+      countryCode: r.country_code || "",
+      type: "place"
+    }));
+  }
+
+  async function geocodePhoton(q) {
+    const biasLat = Number.isFinite(state.lat) ? state.lat : 6.6828;
+    const biasLon = Number.isFinite(state.lon) ? state.lon : 80.3992;
+
+    const data = await fetchWithTimeout(
+      `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=10&lang=en&lat=${biasLat}&lon=${biasLon}`,
+      4000
+    );
+
+    return ((data && data.features) || []).map((f) => {
+      const coords = f.geometry && f.geometry.coordinates ? f.geometry.coordinates : [0, 0];
+      const p = f.properties || {};
+      return {
+        source: "photon",
+        name: p.name || p.street || p.district || "Place",
+        subtitle: [p.district, p.state, p.country].filter(Boolean).join(", "),
+        lat: coords[1],
+        lon: coords[0],
+        countryCode: p.country_code || "",
+        type: p.type || "osm"
+      };
+    });
+  }
+
+  async function geocodeNominatim(q) {
+    const data = await fetchWithTimeout(
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=10&addressdetails=1&accept-language=en&q=${encodeURIComponent(q)}`,
+      4200
+    );
+
+    return (data || []).map((r) => {
+      const parts = String(r.display_name || "").split(",").map((s) => s.trim());
+      return {
+        source: "osm",
+        name: r.name || parts[0] || "Place",
+        subtitle: parts.slice(0, 3).join(", "),
+        lat: Number(r.lat),
+        lon: Number(r.lon),
+        countryCode: r.country_code || "",
+        type: r.addresstype || r.type || "place"
+      };
+    });
+  }
+
+  function addUniqueResult(map, r) {
+    if (!r || !Number.isFinite(r.lat) || !Number.isFinite(r.lon)) return;
+    const key = `${r.lat.toFixed(3)},${r.lon.toFixed(3)}`;
+    if (!map.has(key)) map.set(key, r);
+  }
+
+  async function searchPlaces(q) {
+    const query = String(q || "").trim();
+    if (query.length < 2) return [];
+
+    const first = await Promise.allSettled([geocodeOpenMeteo(query), geocodePhoton(query)]);
+    const map = new Map();
+
+    first.forEach((res) => {
+      if (res.status === "fulfilled" && Array.isArray(res.value)) {
+        res.value.forEach((r) => addUniqueResult(map, r));
+      }
+    });
+
+    if (map.size < 3) {
+      const enhanced = /,|sri\s*lanka|srilanka|ලංකාව/i.test(query) ? query : `${query}, Sri Lanka`;
+      const second = await Promise.allSettled([geocodePhoton(enhanced), geocodeNominatim(enhanced)]);
+
+      second.forEach((res) => {
+        if (res.status === "fulfilled" && Array.isArray(res.value)) {
+          res.value.forEach((r) => addUniqueResult(map, r));
+        }
+      });
+    }
+
+    const results = Array.from(map.values());
+
+    results.forEach((r) => {
+      r.distFromCurrent =
+        Number.isFinite(state.lat) && Number.isFinite(state.lon)
+          ? calcDistanceKm(state.lat, state.lon, r.lat, r.lon)
+          : null;
+
+      r.nearestGauge = nearestGaugeForCoords(r.lat, r.lon, r.countryCode);
+    });
+
+    results.sort((a, b) => (a.distFromCurrent ?? 99999) - (b.distFromCurrent ?? 99999));
+
+    return results.slice(0, 10);
+  }
+
+  function renderSearchResults(results, loading = false) {
+    const searchResults = byId("search-results");
+    if (!searchResults) return;
+
+    if (loading) {
+      searchResults.innerHTML = `<div class="search-empty">Searching villages, towns, districts…</div>`;
+      searchResults.classList.add("active");
+      return;
+    }
+
+    if (!results.length) {
+      searchResults.innerHTML = `<div class="search-empty">No exact match. Try: <strong>Delwala, Ratnapura</strong> or <strong>Kahawatta, Pelmadulla</strong>.</div>`;
+      searchResults.classList.add("active");
+      return;
+    }
+
+    searchResults.innerHTML = results
+      .map((r) => {
+        const gauge = r.nearestGauge
+          ? `Nearest gauge: ${esc(r.nearestGauge.name)} • ${r.nearestGauge.km.toFixed(1)} km`
+          : "No registered gauge nearby";
+
+        const dist = r.distFromCurrent != null ? `${r.distFromCurrent.toFixed(0)} km` : "";
+
+        return `
+          <div
+            class="search-item"
+            data-lat="${r.lat}"
+            data-lon="${r.lon}"
+            data-name="${esc(r.name)}"
+            data-subtitle="${esc(r.subtitle)}"
+            data-country="${esc(String(r.countryCode || "").toUpperCase())}"
+          >
+            <div>
+              <strong>${esc(r.name)}</strong>
+              <div class="search-sub">${esc(r.subtitle || "Location")}</div>
+              <div class="search-meta">
+                <span class="place-type">${esc(r.type || r.source)}</span>
+                <span>${gauge}</span>
+              </div>
+            </div>
+            <span class="result-dist">${esc(dist)}</span>
+          </div>
+        `;
+      })
+      .join("");
+
+    searchResults.classList.add("active");
+  }
+
+  function applySearchedPlace(lat, lon, name, subtitle, countryCode) {
+    const cCode = PROFILES[String(countryCode || "").toUpperCase()] ? String(countryCode).toUpperCase() : guessCountryFromCoords(lat, lon);
+    const profile = PROFILES[cCode] || PROFILES.GLOBAL;
+    const nearest = findNearestState(profile, lat, lon);
+    const stateCode = nearest ? nearest.code : "SEARCH";
+    const displayName = subtitle && subtitle !== name ? `${name} (${subtitle})` : name;
+
+    state.locationSource = "search";
+    setActiveCountryChip(cCode);
+    state.stateCode = stateCode;
+
+    saveGeoCache({
+      lat,
+      lon,
+      city: displayName,
+      countryCode: cCode,
+      stateCode,
+      source: "search"
+    });
+
+    const searchResults = byId("search-results");
+    const cityInput = byId("city-input");
+    if (searchResults) searchResults.classList.remove("active");
+    if (cityInput) cityInput.value = "";
+
+    fetchAllData(lat, lon, displayName, cCode);
+  }
+
+  /* -----------------------------
      Event delegation
   ----------------------------- */
   document.addEventListener("click", (e) => {
+    const searchItem = e.target.closest(".search-item");
+    if (searchItem) {
+      applySearchedPlace(
+        Number(searchItem.dataset.lat),
+        Number(searchItem.dataset.lon),
+        searchItem.dataset.name || "Selected Location",
+        searchItem.dataset.subtitle || "",
+        searchItem.dataset.country || ""
+      );
+      return;
+    }
+
     const tabBtn = e.target.closest(".view-tab-btn, .mob-nav-item");
     if (tabBtn) {
       const tabId = tabBtn.dataset.tab || tabBtn.dataset.mobTab;
@@ -2400,6 +2668,7 @@
 
       if (firstState) {
         state.stateCode = firstState.code;
+        state.locationSource = "manual";
         fetchAllData(firstState.lat, firstState.lon, firstState.name, state.countryCode);
       }
       return;
@@ -2411,6 +2680,7 @@
       stateBtn.classList.add("active");
 
       state.stateCode = stateBtn.dataset.stateCode;
+      state.locationSource = "manual";
       fetchAllData(
         Number(stateBtn.dataset.lat),
         Number(stateBtn.dataset.lon),
@@ -2491,7 +2761,7 @@
   });
 
   /* -----------------------------
-     City search
+     Search input
   ----------------------------- */
   const cityInput = byId("city-input");
   const searchResults = byId("search-results");
@@ -2507,48 +2777,12 @@
         return;
       }
 
+      renderSearchResults([], true);
+
       searchTimeout = setTimeout(async () => {
-        const data = await fetchWithTimeout(
-          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=en&format=json`,
-          3500
-        );
-
-        searchResults.innerHTML = "";
-        if (!data || !data.results) return;
-
-        data.results.forEach((place) => {
-          const div = document.createElement("div");
-          div.className = "search-item";
-          div.innerHTML = `
-            <div>
-              <strong>${esc(place.name)}</strong>
-              <div style="font-size:0.75rem; color:var(--text-secondary);">
-                ${esc([place.admin1, place.country].filter(Boolean).join(", "))}
-              </div>
-            </div>
-            <span style="font-size:0.72rem; color:#38bdf8;">${esc(place.country_code || "🌍")}</span>
-          `;
-
-          div.addEventListener("click", () => {
-            cityInput.value = "";
-            searchResults.classList.remove("active");
-
-            const cCode = place.country_code && PROFILES[place.country_code] ? place.country_code : "GLOBAL";
-            qsa(".country-chip").forEach((t) => t.classList.toggle("active", t.dataset.country === cCode));
-
-            fetchAllData(
-              place.latitude,
-              place.longitude,
-              `${place.name} (${place.admin1 || place.country || ""})`,
-              cCode
-            );
-          });
-
-          searchResults.appendChild(div);
-        });
-
-        searchResults.classList.add("active");
-      }, 260);
+        const results = await searchPlaces(q);
+        renderSearchResults(results, false);
+      }, 240);
     });
   }
 
@@ -2588,6 +2822,7 @@
     if (cached) {
       setActiveCountryChip(cached.countryCode);
       state.stateCode = cached.stateCode || "GPS";
+      state.locationSource = cached.source || "gps";
       fetchAllData(cached.lat, cached.lon, cached.city, cached.countryCode);
     } else {
       fetchAllData(state.lat, state.lon, state.city, "LK");
@@ -2609,7 +2844,8 @@
     switchViewTab,
     fetchAllData,
     renderEverything,
-    autoDetectLocation
+    autoDetectLocation,
+    searchPlaces
   };
 
   startupTelemetry();
